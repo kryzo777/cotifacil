@@ -340,7 +340,8 @@ textarea.modal-input{resize:vertical;min-height:70px}
               <div class="modal-header no-print">
                 <h2 class="modal-title" id="ver-doc-title">Documento</h2>
                 <div class="flex gap-2">
-                  <button class="btn-secondary" onclick="window.print()"><i class="fas fa-print"></i> Imprimir</button>
+                  <button class="btn-secondary" id="btn-ver-doc-pdf" onclick="descargarPDFActual()" style="padding:.4rem .75rem;font-size:.8rem;"><i class="fas fa-file-pdf"></i> PDF</button>
+                  <button class="btn-secondary" onclick="window.print()" style="padding:.4rem .75rem;font-size:.8rem;"><i class="fas fa-print"></i> Imprimir</button>
                   <button class="modal-close" onclick="hideModal('ver-documento-modal')"><i class="fas fa-times"></i></button>
                 </div>
               </div>
@@ -382,18 +383,28 @@ textarea.modal-input{resize:vertical;min-height:70px}
               <div class="card">
                 <h3 style="font-size:.78rem;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:1rem;">Datos del Documento</h3>
                 <div style="display:flex;flex-direction:column;gap:.75rem;">
-                  <div><label class="modal-label">Cliente *</label><select id="doc-cliente" class="modal-input" onchange="actualizarPreview()"><option value="">— Seleccionar cliente —</option></select></div>
+                  <div><label class="modal-label">Cliente *</label><select id="doc-cliente" class="modal-input" onchange="onClienteChange()"><option value="">— Seleccionar cliente —</option></select></div>
                   <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">
                     <div><label class="modal-label">Fecha</label><input type="date" id="doc-fecha" class="modal-input" onchange="actualizarPreview()"></div>
                     <div><label class="modal-label">Válido (días)</label><input type="number" id="doc-validez" class="modal-input" value="30" onchange="actualizarPreview()"></div>
                   </div>
                   <div><label class="modal-label">Notas / Condiciones</label><textarea id="doc-notas" class="modal-input" rows="2" placeholder="Condiciones de pago, entrega..." onkeyup="actualizarPreview()"></textarea></div>
+                  <div class="toggle-wrap" style="margin-top:.1rem;">
+                    <div>
+                      <span style="font-size:.875rem;color:#e2e8f0;font-weight:500;">Enviar PDF al cliente por email</span>
+                      <p id="doc-email-hint" style="font-size:.75rem;color:#64748b;margin-top:.1rem;">Selecciona un cliente con email registrado</p>
+                    </div>
+                    <label class="toggle"><input type="checkbox" id="doc-enviar-email" disabled><span class="toggle-slider"></span></label>
+                  </div>
                 </div>
               </div>
               <div class="card" style="margin-top:1.5rem;">
                 <div class="flex justify-between items-center mb-4">
                   <h3 style="font-size:.78rem;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;">Productos / Servicios</h3>
-                  <button class="btn-secondary" onclick="agregarLineaDoc()" style="padding:.4rem .75rem;font-size:.8rem;margin:0;"><i class="fas fa-plus"></i> Agregar</button>
+                  <div class="flex gap-2">
+                    <button class="btn-secondary" onclick="abrirSelectorProducto()" style="padding:.4rem .75rem;font-size:.8rem;margin:0;"><i class="fas fa-search"></i> Del sistema</button>
+                    <button class="btn-secondary" onclick="agregarLineaDoc()" style="padding:.4rem .75rem;font-size:.8rem;margin:0;"><i class="fas fa-plus"></i> Personalizado</button>
+                  </div>
                 </div>
                 <div id="doc-lineas"></div>
                 <div style="margin-top:1rem;padding-top:.75rem;border-top:1px solid #1e2d3d;">
@@ -403,7 +414,7 @@ textarea.modal-input{resize:vertical;min-height:70px}
                 </div>
                 <div class="flex justify-end gap-2" style="margin-top:1.25rem;">
                   <button class="btn-secondary" onclick="limpiarFormDoc()">Limpiar</button>
-                  <button class="btn-primary" onclick="guardarDocumento()"><i class="fas fa-save"></i> Guardar</button>
+                  <button class="btn-primary" id="btn-guardar-doc" onclick="guardarDocumento()"><i class="fas fa-save"></i> Guardar</button>
                 </div>
               </div>
             </div>
@@ -413,6 +424,62 @@ textarea.modal-input{resize:vertical;min-height:70px}
             </div>
           </div>
         </div>
+
+        <!-- Modal selector producto del sistema -->
+        <div id="selector-producto-modal" class="modal">
+          <div class="modal-backdrop" onclick="hideModal('selector-producto-modal')"></div>
+          <div class="modal-content modal-content-lg">
+            <div class="modal-inner">
+              <div class="modal-header">
+                <h2 class="modal-title">Seleccionar Producto del Sistema</h2>
+                <button class="modal-close" onclick="hideModal('selector-producto-modal')"><i class="fas fa-times"></i></button>
+              </div>
+              <div class="modal-body">
+                <div class="search-wrapper" style="margin-bottom:1rem;"><input type="text" id="selector-search" placeholder="Buscar por nombre, SKU, categoría..." oninput="filtrarSelectorProductos(this.value)"></div>
+                <div class="table-container" style="max-height:360px;overflow-y:auto;">
+                  <table>
+                    <thead><tr><th>SKU</th><th>Nombre</th><th>Categoría</th><th>Precio Unit.</th><th>Stock</th><th></th></tr></thead>
+                    <tbody id="selector-productos-body"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modal editar documento -->
+        <div id="editar-documento-modal" class="modal">
+          <div class="modal-backdrop" onclick="hideModal('editar-documento-modal')"></div>
+          <div class="modal-content">
+            <div class="modal-inner">
+              <div class="modal-header">
+                <h2 class="modal-title" id="editar-doc-title">Editar Documento</h2>
+                <button class="modal-close" onclick="hideModal('editar-documento-modal')"><i class="fas fa-times"></i></button>
+              </div>
+              <div class="modal-body">
+                <input type="hidden" id="editar-doc-id">
+                <div style="display:flex;flex-direction:column;gap:.75rem;">
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">
+                    <div><label class="modal-label">Estado</label>
+                      <select id="editar-doc-estado" class="modal-input">
+                        <option value="pendiente">Pendiente</option>
+                        <option value="aprobado">Aprobado</option>
+                        <option value="rechazado">Rechazado</option>
+                      </select>
+                    </div>
+                    <div><label class="modal-label">Validez (días)</label><input type="number" id="editar-doc-validez" class="modal-input" value="30"></div>
+                  </div>
+                  <div><label class="modal-label">Notas</label><textarea id="editar-doc-notas" class="modal-input" rows="3"></textarea></div>
+                </div>
+                <div class="flex justify-end gap-2" style="margin-top:1.25rem;">
+                  <button class="btn-secondary" onclick="hideModal('editar-documento-modal')">Cancelar</button>
+                  <button class="btn-primary" onclick="confirmarEditarDoc()"><i class="fas fa-save"></i> Guardar cambios</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
 
       <!-- REPORTES -->
@@ -565,15 +632,35 @@ textarea.modal-input{resize:vertical;min-height:70px}
             <!-- Apariencia -->
             <div class="cfg-panel" id="cfgpanel-apariencia">
               <div class="cfg-section">
-                <p class="cfg-section-title">Color principal</p>
-                <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
-                  <button class="color-swatch selected" style="background:#3b82f6;" onclick="cambiarColor('#3b82f6',this)" title="Azul"></button>
-                  <button class="color-swatch" style="background:#8b5cf6;" onclick="cambiarColor('#8b5cf6',this)" title="Púrpura"></button>
-                  <button class="color-swatch" style="background:#10b981;" onclick="cambiarColor('#10b981',this)" title="Verde"></button>
-                  <button class="color-swatch" style="background:#f59e0b;" onclick="cambiarColor('#f59e0b',this)" title="Ámbar"></button>
-                  <button class="color-swatch" style="background:#ef4444;" onclick="cambiarColor('#ef4444',this)" title="Rojo"></button>
-                  <button class="color-swatch" style="background:#ec4899;" onclick="cambiarColor('#ec4899',this)" title="Rosa"></button>
-                  <button class="color-swatch" style="background:#06b6d4;" onclick="cambiarColor('#06b6d4',this)" title="Cyan"></button>
+                <p class="cfg-section-title">Color del sistema (sidebar, botones)</p>
+                <div style="display:flex;gap:.75rem;flex-wrap:wrap;" id="swatches-sistema">
+                  <button class="color-swatch selected" style="background:#3b82f6;" onclick="cambiarColor('#3b82f6',this,'sistema')" title="Azul"></button>
+                  <button class="color-swatch" style="background:#8b5cf6;" onclick="cambiarColor('#8b5cf6',this,'sistema')" title="Púrpura"></button>
+                  <button class="color-swatch" style="background:#10b981;" onclick="cambiarColor('#10b981',this,'sistema')" title="Verde"></button>
+                  <button class="color-swatch" style="background:#f59e0b;" onclick="cambiarColor('#f59e0b',this,'sistema')" title="Ámbar"></button>
+                  <button class="color-swatch" style="background:#ef4444;" onclick="cambiarColor('#ef4444',this,'sistema')" title="Rojo"></button>
+                  <button class="color-swatch" style="background:#ec4899;" onclick="cambiarColor('#ec4899',this,'sistema')" title="Rosa"></button>
+                  <button class="color-swatch" style="background:#06b6d4;" onclick="cambiarColor('#06b6d4',this,'sistema')" title="Cyan"></button>
+                </div>
+              </div>
+              <div class="cfg-section">
+                <p class="cfg-section-title">Color de documentos (cotizaciones, órdenes, facturas)</p>
+                <p style="color:#64748b;font-size:.78rem;margin-bottom:.75rem;">Aplica el mismo color a todos los tipos de documento. Se guarda al hacer clic en "Guardar".</p>
+                <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:.75rem;" id="swatches-doc">
+                  <button class="color-swatch" style="background:#1d4ed8;" onclick="cambiarColor('#1d4ed8',this,'doc')" title="Azul oscuro"></button>
+                  <button class="color-swatch selected" style="background:#3b82f6;" onclick="cambiarColor('#3b82f6',this,'doc')" title="Azul"></button>
+                  <button class="color-swatch" style="background:#7c3aed;" onclick="cambiarColor('#7c3aed',this,'doc')" title="Púrpura"></button>
+                  <button class="color-swatch" style="background:#059669;" onclick="cambiarColor('#059669',this,'doc')" title="Verde oscuro"></button>
+                  <button class="color-swatch" style="background:#d97706;" onclick="cambiarColor('#d97706',this,'doc')" title="Ámbar oscuro"></button>
+                  <button class="color-swatch" style="background:#dc2626;" onclick="cambiarColor('#dc2626',this,'doc')" title="Rojo oscuro"></button>
+                  <button class="color-swatch" style="background:#0f172a;" onclick="cambiarColor('#0f172a',this,'doc')" title="Negro"></button>
+                </div>
+                <div style="display:flex;align-items:center;gap:.75rem;">
+                  <label class="modal-label" style="margin:0;white-space:nowrap;">Color personalizado:</label>
+                  <input type="color" id="cfg-doc-color-custom" value="#3b82f6"
+                    style="width:42px;height:32px;border:1px solid #243447;border-radius:6px;background:none;cursor:pointer;padding:2px;"
+                    onchange="cambiarColorDocCustom(this.value)">
+                  <span id="cfg-doc-color-hex" style="font-size:.82rem;color:#94a3b8;font-family:monospace;">#3b82f6</span>
                 </div>
               </div>
               <div class="cfg-section">
