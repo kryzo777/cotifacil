@@ -2,6 +2,12 @@
    CotiFácil — script.js
    ===================================================== */
 
+// Si estamos en la página de login, no ejecutar nada
+if (window.location.pathname === '/login') {
+  // El login tiene su propio script inline, salir aquí
+  throw new Error('login-page-exit');
+}
+
 // ── Estado global ──────────────────────────────────────
 const App = {
   currentPage: 'dashboard',
