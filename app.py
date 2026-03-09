@@ -1,7 +1,6 @@
 import io
 import csv
-from flask import Response
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from flask import Response, Flask, render_template, request, jsonify, session, redirect, url_for
 import json
 import os
 from datetime import datetime
@@ -12,64 +11,43 @@ app.secret_key = os.environ.get('SECRET_KEY', 'cotifacil_secret_key_2024')
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
-# Archivo de base de datos simple
 DB_FILE = 'data/database.json'
 
-# Inicializar base de datos si no existe
 def init_db():
     if not os.path.exists('data'):
         os.makedirs('data')
-
     if not os.path.exists(DB_FILE):
         data = {
-            "users": [
-                {"id": 1, "email": "admin@cotifacil.com", "password": "admin123", "name": "Admin"}
-            ],
-            "clients": [],
-            "products": [
-                {"id": 1, "sku": "PROD001", "nombre": "Producto Ejemplo", "precio": 100000, "stock": 50, "stock_minimo": 5}
-            ],
-            "documents": []
+            "users": [{"id": 1, "email": "admin@cotifacil.com", "password": "admin123", "name": "Administrador", "role": "admin"}],
+            "clients": [], "products": [], "documents": []
         }
         with open(DB_FILE, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
 
-# Cargar datos
 def load_db():
     try:
         with open(DB_FILE, 'r', encoding='utf-8') as f:
             return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
+    except:
         init_db()
         return load_db()
-    except Exception as e:
-        print(f"Error loading database: {str(e)}")
-        return {"users": [], "clients": [], "products": [], "documents": []}
 
-# Guardar datos
 def save_db(data):
-    try:
-        with open(DB_FILE, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=4, ensure_ascii=False)
-    except Exception as e:
-        print(f"Error saving database: {str(e)}")
+    with open(DB_FILE, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)
 
-# Obtener el próximo ID disponible para una lista
 def get_next_id(items):
-    if not items:
-        return 1
-    return max(item['id'] for item in items) + 1
+    return max((item['id'] for item in items), default=0) + 1
 
-# Decorador para requerir login
 def login_required(f):
     @wraps(f)
-    def decorated_function(*args, **kwargs):
+    def decorated(*args, **kwargs):
         if 'user_id' not in session:
             return jsonify({"error": "Login requerido"}), 401
         return f(*args, **kwargs)
-    return decorated_function
+    return decorated
 
-# Rutas de la aplicación
+# ── Rutas principales ─────────────────────────────────
 @app.route('/')
 def index():
     if 'user_id' in session:
@@ -78,34 +56,23 @@ def index():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    # Si ya tiene sesión, ir directo al dashboard
     if request.method == 'GET' and 'user_id' in session:
         return redirect(url_for('index'))
     if request.method == 'POST':
         try:
             data = request.get_json()
-            email = data.get('email')
-            password = data.get('password')
-
-            db_data = load_db()
-            for user in db_data['users']:
-                if user['email'] == email and user['password'] == password:
+            email = data.get('email', '').strip().lower()
+            password = data.get('password', '')
+            db = load_db()
+            for user in db['users']:
+                if user['email'].lower() == email and user['password'] == password:
                     session['user_id'] = user['id']
                     session['user_name'] = user['name']
                     session['user_email'] = user['email']
-                    return jsonify({
-                        "success": True,
-                        "user": {
-                            "name": user['name'],
-                            "email": user['email']
-                        }
-                    })
-
+                    return jsonify({"success": True, "user": {"name": user['name'], "email": user['email']}})
             return jsonify({"success": False, "message": "Credenciales incorrectas"}), 401
-
         except Exception as e:
             return jsonify({"success": False, "message": str(e)}), 500
-
     return render_template('login.html')
 
 @app.route('/logout')
@@ -116,160 +83,49 @@ def logout():
 @app.route('/api/user')
 def api_user():
     if 'user_id' in session:
-        return jsonify({
-            "id": session['user_id'],
-            "name": session['user_name'],
-            "email": session['user_email']
-        })
+        return jsonify({"id": session['user_id'], "name": session['user_name'], "email": session['user_email']})
     return jsonify({"error": "No autenticado"}), 401
 
-# API Routes
+@app.route('/api/user/update', methods=['PUT'])
+@login_required
+def api_user_update():
+    try:
+        data_in = request.get_json()
+        db = load_db()
+        uid = session['user_id']
+        for i, user in enumerate(db['users']):
+            if user['id'] == uid:
+                if data_in.get('name'):
+                    db['users'][i]['name'] = data_in['name']
+                if data_in.get('email'):
+                    db['users'][i]['email'] = data_in['email']
+                if data_in.get('password_nueva'):
+                    if user['password'] != data_in.get('password_actual', ''):
+                        return jsonify({"success": False, "error": "Contraseña actual incorrecta"}), 400
+                    db['users'][i]['password'] = data_in['password_nueva']
+                save_db(db)
+                session['user_name'] = db['users'][i]['name']
+                session['user_email'] = db['users'][i]['email']
+                return jsonify({"success": True})
+        return jsonify({"success": False, "error": "Usuario no encontrado"}), 404
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+# ── Clientes ──────────────────────────────────────────
 @app.route('/api/clients', methods=['GET', 'POST'])
 @login_required
 def api_clients():
     try:
-        data = load_db()
-
+        db = load_db()
         if request.method == 'GET':
-            return jsonify(data['clients'])
-
-        elif request.method == 'POST':
-            new_client = request.get_json()
-            new_client['id'] = get_next_id(data['clients'])
-            new_client['documentos'] = 0
-            new_client['total'] = 0
-            data['clients'].append(new_client)
-            save_db(data)
-            return jsonify({"success": True, "client": new_client})
-            
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
-
-@app.route('/api/products', methods=['GET', 'POST'])
-@login_required
-def api_products():
-    try:
-        data = load_db()
-
-        if request.method == 'GET':
-            return jsonify(data['products'])
-
-        elif request.method == 'POST':
-            new_product = request.get_json()
-            new_product['id'] = get_next_id(data['products'])
-            data['products'].append(new_product)
-            save_db(data)
-            return jsonify({"success": True, "product": new_product})
-            
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
-
-@app.route('/api/products/<int:product_id>', methods=['GET', 'PUT', 'DELETE'])
-@login_required
-def api_product(product_id):
-    try:
-        data = load_db()
-
-        if request.method == 'GET':
-            product = next((p for p in data['products'] if p['id'] == product_id), None)
-            if product:
-                return jsonify(product)
-            return jsonify({"error": "Producto no encontrado"}), 404
-
-        elif request.method == 'PUT':
-            product_data = request.get_json()
-            for i, product in enumerate(data['products']):
-                if product['id'] == product_id:
-                    # Actualizar producto
-                    for key, value in product_data.items():
-                        data['products'][i][key] = value
-                    save_db(data)
-                    return jsonify({"success": True, "product": data['products'][i]})
-            return jsonify({"error": "Producto no encontrado"}), 404
-
-        elif request.method == 'DELETE':
-            data['products'] = [p for p in data['products'] if p['id'] != product_id]
-            save_db(data)
-            return jsonify({"success": True})
-            
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
-
-@app.route('/api/documents', methods=['GET', 'POST'])
-@login_required
-def api_documents():
-    try:
-        data = load_db()
-
-        if request.method == 'GET':
-            return jsonify(data['documents'])
-
-        elif request.method == 'POST':
-            new_document = request.get_json()
-            new_document['id'] = get_next_id(data['documents'])
-            new_document['date'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            new_document['number'] = f"COT-{get_next_id(data['documents']):04d}"
-            new_document['estado'] = 'pendiente'
-
-            data['documents'].append(new_document)
-            save_db(data)
-            return jsonify({"success": True, "document": new_document})
-            
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
-
-@app.route('/api/stats')
-@login_required
-def api_stats():
-    try:
-        data = load_db()
-
-        # Calcular total de ventas
-        total_sales = sum(doc.get('total', 0) for doc in data['documents'])
-
-        # Documentos recientes (últimos 5)
-        recent_docs = sorted(data['documents'], key=lambda x: x.get('date', ''), reverse=True)[:5]
-
-        # Calcular documentos por cliente
-        client_stats = {}
-        for doc in data['documents']:
-            client_name = doc.get('cliente', {}).get('razon_social', 'Sin nombre')
-            if client_name not in client_stats:
-                client_stats[client_name] = {'count': 0, 'total': 0}
-            client_stats[client_name]['count'] += 1
-            client_stats[client_name]['total'] += doc.get('total', 0)
-
-        stats = {
-            "total_documents": len(data['documents']),
-            "total_clients": len(data['clients']),
-            "total_products": len(data['products']),
-            "total_sales": total_sales,
-            "recent_documents": recent_docs,
-            "client_stats": client_stats
-        }
-
-        return jsonify(stats)
-        
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
-
-@app.route('/api/generate-pdf/<int:doc_id>')
-@login_required
-def api_generate_pdf(doc_id):
-    try:
-        data = load_db()
-        document = next((doc for doc in data['documents'] if doc['id'] == doc_id), None)
-
-        if not document:
-            return jsonify({"success": False, "error": "Documento no encontrado"}), 404
-
-        # Simular generación de PDF (en una implementación real, usaríamos una librería)
-        return jsonify({
-            "success": True,
-            "message": "PDF generado exitosamente",
-            "document": document
-        })
-        
+            return jsonify(db['clients'])
+        new_client = request.get_json()
+        new_client['id'] = get_next_id(db['clients'])
+        new_client.setdefault('documentos', 0)
+        new_client.setdefault('total', 0)
+        db['clients'].append(new_client)
+        save_db(db)
+        return jsonify({"success": True, "client": new_client})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
@@ -277,71 +133,40 @@ def api_generate_pdf(doc_id):
 @login_required
 def api_client(client_id):
     try:
-        data = load_db()
-
+        db = load_db()
         if request.method == 'GET':
-            client = next((c for c in data['clients'] if c['id'] == client_id), None)
-            if client:
-                return jsonify(client)
-            return jsonify({"error": "Cliente no encontrado"}), 404
-
+            c = next((c for c in db['clients'] if c['id'] == client_id), None)
+            return jsonify(c) if c else (jsonify({"error": "No encontrado"}), 404)
         elif request.method == 'PUT':
-            client_data = request.get_json()
-            for i, client in enumerate(data['clients']):
-                if client['id'] == client_id:
-                    # Actualizar cliente
-                    for key, value in client_data.items():
-                        data['clients'][i][key] = value
-                    save_db(data)
-                    return jsonify({"success": True, "client": data['clients'][i]})
-            return jsonify({"error": "Cliente no encontrado"}), 404
-
+            payload = request.get_json()
+            for i, c in enumerate(db['clients']):
+                if c['id'] == client_id:
+                    db['clients'][i].update(payload)
+                    save_db(db)
+                    return jsonify({"success": True, "client": db['clients'][i]})
+            return jsonify({"error": "No encontrado"}), 404
         elif request.method == 'DELETE':
-            data['clients'] = [c for c in data['clients'] if c['id'] != client_id]
-            save_db(data)
+            db['clients'] = [c for c in db['clients'] if c['id'] != client_id]
+            save_db(db)
             return jsonify({"success": True})
-            
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
-@app.route('/api/clients/export', methods=['GET'])
+@app.route('/api/clients/export')
 @login_required
 def api_export_clients():
     try:
-        data = load_db()
-
-        # Crear un archivo CSV en memoria
+        db = load_db()
         output = io.StringIO()
         writer = csv.writer(output)
-
-        # Escribir encabezados
-        writer.writerow(['RUT', 'Razón Social', 'Dirección', 'Región', 'Ciudad', 'Email', 'Teléfono', 'Nota', 'Documentos', 'Total'])
-
-        # Escribir datos
-        for client in data['clients']:
-            writer.writerow([
-                client.get('rut', ''),
-                client.get('razon_social', ''),
-                client.get('direccion', ''),
-                client.get('region', ''),
-                client.get('ciudad', ''),
-                client.get('email', ''),
-                client.get('telefono', ''),
-                client.get('nota', ''),
-                client.get('documentos', 0),
-                client.get('total', 0)
-            ])
-
-        # Preparar respuesta
+        writer.writerow(['RUT','Razón Social','Dirección','Región','Ciudad','Email','Teléfono','Nota','Documentos','Total'])
+        for c in db['clients']:
+            writer.writerow([c.get('rut',''), c.get('razon_social',''), c.get('direccion',''),
+                c.get('region',''), c.get('ciudad',''), c.get('email',''),
+                c.get('telefono',''), c.get('nota',''), c.get('documentos',0), c.get('total',0)])
         output.seek(0)
-        response = Response(
-            output.getvalue(),
-            mimetype="text/csv",
-            headers={"Content-disposition": "attachment; filename=clientes_cotifacil.csv"}
-        )
-
-        return response
-        
+        return Response(output.getvalue(), mimetype="text/csv",
+            headers={"Content-disposition": "attachment; filename=clientes_cotifacil.csv"})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
@@ -351,58 +176,210 @@ def api_import_clients():
     try:
         if 'file' not in request.files:
             return jsonify({"success": False, "error": "No se proporcionó archivo"}), 400
-
         file = request.files['file']
-        if file.filename == '':
-            return jsonify({"success": False, "error": "Nombre de archivo vacío"}), 400
-
-        # Verificar extensión
         if not file.filename.endswith('.csv'):
-            return jsonify({"success": False, "error": "Formato de archivo no válido. Use CSV."}), 400
-
-        data = load_db()
-        existing_clients = data['clients']
+            return jsonify({"success": False, "error": "Solo archivos CSV"}), 400
+        db = load_db()
         new_clients = []
-
-        # Procesar CSV
         stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
-        csv_reader = csv.reader(stream)
+        reader = csv.reader(stream)
+        next(reader, None)  # skip header
+        for row in reader:
+            if len(row) < 2 or not row[0]:
+                continue
+            rut = row[0].strip()
+            if any(c.get('rut') == rut for c in db['clients'] + new_clients):
+                continue
+            new_clients.append({
+                'id': get_next_id(db['clients'] + new_clients),
+                'rut': rut,
+                'razon_social': row[1] if len(row) > 1 else '',
+                'direccion':    row[2] if len(row) > 2 else '',
+                'region':       row[3] if len(row) > 3 else '',
+                'ciudad':       row[4] if len(row) > 4 else '',
+                'email':        row[5] if len(row) > 5 else '',
+                'telefono':     row[6] if len(row) > 6 else '',
+                'nota':         row[7] if len(row) > 7 else '',
+                'documentos': 0, 'total': 0
+            })
+        db['clients'].extend(new_clients)
+        save_db(db)
+        return jsonify({"success": True, "message": f"Se importaron {len(new_clients)} clientes", "imported_count": len(new_clients)})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
-        # Saltar encabezados
-        next(csv_reader, None)
+# ── Productos ─────────────────────────────────────────
+@app.route('/api/products', methods=['GET', 'POST'])
+@login_required
+def api_products():
+    try:
+        db = load_db()
+        if request.method == 'GET':
+            return jsonify(db['products'])
+        new_product = request.get_json()
+        new_product['id'] = get_next_id(db['products'])
+        db['products'].append(new_product)
+        save_db(db)
+        return jsonify({"success": True, "product": new_product})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
-        for row in csv_reader:
-            if len(row) >= 8:  # Mínimo de campos requeridos
-                # Verificar si el cliente ya existe por RUT
-                rut = row[0].replace('.', '').replace('-', '') if row[0] else None
-                exists = any(c.get('rut') == rut for c in existing_clients)
+@app.route('/api/products/<int:product_id>', methods=['GET', 'PUT', 'DELETE'])
+@login_required
+def api_product(product_id):
+    try:
+        db = load_db()
+        if request.method == 'GET':
+            p = next((p for p in db['products'] if p['id'] == product_id), None)
+            return jsonify(p) if p else (jsonify({"error": "No encontrado"}), 404)
+        elif request.method == 'PUT':
+            payload = request.get_json()
+            for i, p in enumerate(db['products']):
+                if p['id'] == product_id:
+                    db['products'][i].update(payload)
+                    save_db(db)
+                    return jsonify({"success": True, "product": db['products'][i]})
+            return jsonify({"error": "No encontrado"}), 404
+        elif request.method == 'DELETE':
+            db['products'] = [p for p in db['products'] if p['id'] != product_id]
+            save_db(db)
+            return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
-                if not exists and rut:
-                    new_client = {
-                        'id': get_next_id(data['clients'] + new_clients),
-                        'rut': rut,
-                        'razon_social': row[1],
-                        'direccion': row[2],
-                        'region': row[3],
-                        'ciudad': row[4],
-                        'email': row[5],
-                        'telefono': row[6],
-                        'nota': row[7] if len(row) > 7 else '',
-                        'documentos': int(row[8]) if len(row) > 8 and row[8].isdigit() else 0,
-                        'total': int(row[9]) if len(row) > 9 and row[9].isdigit() else 0
-                    }
-                    new_clients.append(new_client)
+@app.route('/api/products/import', methods=['POST'])
+@login_required
+def api_import_products():
+    try:
+        if 'file' not in request.files:
+            return jsonify({"success": False, "error": "No se proporcionó archivo"}), 400
+        file = request.files['file']
+        if not file.filename.endswith('.csv'):
+            return jsonify({"success": False, "error": "Solo archivos CSV"}), 400
+        db = load_db()
+        new_products = []
+        stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
+        reader = csv.reader(stream)
+        next(reader, None)
+        for row in reader:
+            if len(row) < 2 or not row[0]:
+                continue
+            sku = row[0].strip()
+            if any(p.get('sku') == sku for p in db['products'] + new_products):
+                continue
+            new_products.append({
+                'id': get_next_id(db['products'] + new_products),
+                'sku': sku,
+                'nombre':       row[1] if len(row) > 1 else '',
+                'precio':       float(row[2]) if len(row) > 2 and row[2].replace('.','').replace(',','').isdigit() else 0,
+                'stock':        int(row[3]) if len(row) > 3 and row[3].isdigit() else 0,
+                'stock_minimo': int(row[4]) if len(row) > 4 and row[4].isdigit() else 0,
+                'categoria':    row[5] if len(row) > 5 else '',
+                'proveedor':    row[6] if len(row) > 6 else '',
+            })
+        db['products'].extend(new_products)
+        save_db(db)
+        return jsonify({"success": True, "message": f"Se importaron {len(new_products)} productos", "imported_count": len(new_products)})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
-        # Agregar nuevos clientes a la base de datos
-        data['clients'].extend(new_clients)
-        save_db(data)
+# ── Documentos ────────────────────────────────────────
+@app.route('/api/documents', methods=['GET', 'POST'])
+@login_required
+def api_documents():
+    try:
+        db = load_db()
+        if request.method == 'GET':
+            return jsonify(db['documents'])
+        payload = request.get_json()
+        new_id = get_next_id(db['documents'])
+        tipo = payload.get('tipo', 'cotizacion')
+        prefijos = {'cotizacion': 'COT', 'orden_compra': 'OC', 'factura': 'FAC'}
+        prefix = prefijos.get(tipo, 'DOC')
+        # Contar documentos del mismo tipo para numeración
+        count = len([d for d in db['documents'] if d.get('tipo') == tipo]) + 1
+        payload['id'] = new_id
+        payload['number'] = f"{prefix}-{count:04d}"
+        payload['date'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        payload.setdefault('estado', 'pendiente')
+        db['documents'].append(payload)
+        # Actualizar estadísticas del cliente
+        if payload.get('cliente') and payload['cliente'].get('id'):
+            cid = payload['cliente']['id']
+            for i, c in enumerate(db['clients']):
+                if c['id'] == cid:
+                    db['clients'][i]['documentos'] = db['clients'][i].get('documentos', 0) + 1
+                    db['clients'][i]['total'] = db['clients'][i].get('total', 0) + payload.get('total', 0)
+                    break
+        save_db(db)
+        return jsonify({"success": True, "document": payload})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
+@app.route('/api/documents/<int:doc_id>', methods=['GET', 'PUT', 'DELETE'])
+@login_required
+def api_document(doc_id):
+    try:
+        db = load_db()
+        if request.method == 'GET':
+            d = next((d for d in db['documents'] if d['id'] == doc_id), None)
+            return jsonify(d) if d else (jsonify({"error": "No encontrado"}), 404)
+        elif request.method == 'PUT':
+            payload = request.get_json()
+            for i, d in enumerate(db['documents']):
+                if d['id'] == doc_id:
+                    db['documents'][i].update(payload)
+                    save_db(db)
+                    return jsonify({"success": True, "document": db['documents'][i]})
+            return jsonify({"error": "No encontrado"}), 404
+        elif request.method == 'DELETE':
+            db['documents'] = [d for d in db['documents'] if d['id'] != doc_id]
+            save_db(db)
+            return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+# ── Stats ─────────────────────────────────────────────
+@app.route('/api/stats')
+@login_required
+def api_stats():
+    try:
+        db = load_db()
+        total_sales = sum(d.get('total', 0) for d in db['documents'])
+        recent_docs = sorted(db['documents'], key=lambda x: x.get('date', ''), reverse=True)[:5]
+        client_stats = {}
+        doc_type_stats = {'cotizacion': {'count': 0, 'total': 0}, 'orden_compra': {'count': 0, 'total': 0}, 'factura': {'count': 0, 'total': 0}}
+        for doc in db['documents']:
+            name = doc.get('cliente', {}).get('razon_social', 'Sin nombre')
+            if name not in client_stats:
+                client_stats[name] = {'count': 0, 'total': 0}
+            client_stats[name]['count'] += 1
+            client_stats[name]['total'] += doc.get('total', 0)
+            tipo = doc.get('tipo', 'cotizacion')
+            if tipo in doc_type_stats:
+                doc_type_stats[tipo]['count'] += 1
+                doc_type_stats[tipo]['total'] += doc.get('total', 0)
         return jsonify({
-            "success": True,
-            "message": f"Se importaron {len(new_clients)} clientes correctamente",
-            "imported_count": len(new_clients)
+            "total_documents": len(db['documents']),
+            "total_clients": len(db['clients']),
+            "total_products": len(db['products']),
+            "total_sales": total_sales,
+            "recent_documents": recent_docs,
+            "client_stats": client_stats,
+            "doc_type_stats": doc_type_stats
         })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
+@app.route('/api/generate-pdf/<int:doc_id>')
+@login_required
+def api_generate_pdf(doc_id):
+    try:
+        db = load_db()
+        doc = next((d for d in db['documents'] if d['id'] == doc_id), None)
+        if not doc:
+            return jsonify({"success": False, "error": "Documento no encontrado"}), 404
+        return jsonify({"success": True, "message": "PDF generado", "document": doc})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 

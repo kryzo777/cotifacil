@@ -1,372 +1,596 @@
 {% extends "base.html" %}
-
 {% block content %}
+<style>
+.search-wrapper{position:relative;margin-bottom:1.25rem}
+.search-wrapper::before{content:"\f002";font-family:"Font Awesome 6 Free";font-weight:900;position:absolute;left:.9rem;top:50%;transform:translateY(-50%);color:#4b6070;font-size:.8rem;pointer-events:none;z-index:2;transition:color .2s}
+.search-wrapper:focus-within::before{color:#3b82f6}
+.search-wrapper input{display:block!important;width:100%!important;padding:.72rem 1rem .72rem 2.5rem!important;background:#0f1923!important;border:1px solid #243447!important;border-radius:10px!important;color:#e2e8f0!important;font-size:.875rem!important;font-family:inherit!important;outline:none!important;box-shadow:none!important;transition:border-color .2s,box-shadow .2s!important;box-sizing:border-box!important;-webkit-appearance:none!important}
+.search-wrapper input::placeholder{color:#3d5468!important}
+.search-wrapper input:focus{border-color:#3b82f6!important;background:#111e2c!important;box-shadow:0 0 0 3px rgba(59,130,246,.13)!important}
+.modal-label{display:block;font-size:.78rem;font-weight:500;color:#64748b;letter-spacing:.05em;text-transform:uppercase;margin-bottom:.4rem}
+.modal-input{width:100%;padding:.72rem 1rem;background:#0f1923!important;border:1px solid #243447!important;border-radius:10px!important;color:#e2e8f0!important;font-size:.875rem;font-family:inherit;outline:none;transition:border-color .2s,box-shadow .2s;box-sizing:border-box;-webkit-appearance:none;appearance:none}
+.modal-input::placeholder{color:#3d5468!important}
+.modal-input:focus{border-color:#3b82f6!important;background:#111e2c!important;box-shadow:0 0 0 3px rgba(59,130,246,.13)!important}
+select.modal-input{background-image:url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%234b6070' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")!important;background-position:right .75rem center!important;background-repeat:no-repeat!important;background-size:1.2em!important;padding-right:2.5rem;cursor:pointer}
+select.modal-input option{background:#0f1923;color:#e2e8f0}
+textarea.modal-input{resize:vertical;min-height:70px}
+.modal-content-lg{max-width:52rem!important}
+.modal-content-xl{max-width:72rem!important}
+.header-user-btn{display:flex;align-items:center;gap:.5rem;padding:.4rem .75rem;background:#1f2937;border:1px solid #374151;border-radius:10px;color:#d1d5db;cursor:pointer;transition:all .2s;font-size:.875rem}
+.header-user-btn:hover{background:#374151;color:white}
+.header-avatar-sm{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#1d4ed8);display:flex;align-items:center;justify-content:center;font-size:.72rem;color:white;font-weight:700;flex-shrink:0}
+.dropdown{position:relative}
+.dropdown-menu{position:absolute;top:calc(100% + 8px);right:0;background:#1f2937;border:1px solid #374151;border-radius:10px;min-width:180px;z-index:600;box-shadow:0 10px 30px rgba(0,0,0,.4);display:none;overflow:hidden}
+.dropdown-menu.open{display:block}
+.dropdown-item{display:flex;align-items:center;gap:.6rem;padding:.65rem 1rem;color:#d1d5db;font-size:.875rem;cursor:pointer;transition:background .15s;border:none;background:none;width:100%;text-align:left}
+.dropdown-item:hover{background:#374151;color:white}
+.dropdown-item.danger:hover{background:rgba(239,68,68,.15);color:#f87171}
+.dropdown-divider{border-top:1px solid #374151;margin:.2rem 0}
+.cfg-tab{padding:.55rem 1rem;border-radius:8px;font-size:.85rem;font-weight:500;color:#64748b;background:none;border:none;cursor:pointer;transition:all .2s;text-align:left;width:100%}
+.cfg-tab.active{background:#3b82f6;color:white}
+.cfg-panel{display:none}
+.cfg-panel.active{display:block}
+.cfg-section{margin-bottom:1.75rem}
+.cfg-section-title{font-size:.78rem;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.875rem;padding-bottom:.5rem;border-bottom:1px solid #1e2d3d}
+.toggle-wrap{display:flex;align-items:center;justify-content:space-between;padding:.75rem;background:#0f1923;border-radius:8px;border:1px solid #1e2d3d;margin-bottom:.5rem}
+.toggle{position:relative;display:inline-block;width:42px;height:22px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;inset:0;background:#243447;border-radius:22px;transition:.3s;cursor:pointer}
+.toggle-slider:before{content:"";position:absolute;width:16px;height:16px;left:3px;bottom:3px;background:white;border-radius:50%;transition:.3s}
+.toggle input:checked+.toggle-slider{background:#3b82f6}
+.toggle input:checked+.toggle-slider:before{transform:translateX(20px)}
+.upload-zone{border:2px dashed #243447;border-radius:10px;padding:1.75rem;text-align:center;cursor:pointer;transition:all .2s}
+.upload-zone:hover{border-color:#3b82f6;background:rgba(59,130,246,.04)}
+.color-swatch{width:30px;height:30px;border-radius:6px;border:2px solid transparent;cursor:pointer;transition:all .2s}
+.color-swatch.selected{border-color:white;transform:scale(1.2)}
+.doc-preview{background:white;color:#111;padding:2rem;border-radius:8px;font-size:.82rem;line-height:1.5}
+.doc-preview-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:2px solid #e5e7eb}
+.doc-preview table{width:100%;border-collapse:collapse;margin-top:.75rem}
+.doc-preview th{background:#f3f4f6;padding:.45rem .6rem;text-align:left;font-size:.75rem;border-bottom:1px solid #d1d5db}
+.doc-preview td{padding:.4rem .6rem;border-bottom:1px solid #e5e7eb;font-size:.78rem}
+.doc-type-card{border:2px solid #243447;border-radius:12px;padding:1.25rem;cursor:pointer;text-align:center;transition:all .2s}
+.doc-type-card:hover{border-color:#3b82f6;background:rgba(59,130,246,.04)}
+.doc-type-card.selected{border-color:#3b82f6;background:rgba(59,130,246,.08)}
+.linea-input{width:100%;padding:.45rem .6rem;background:#0f1923;border:1px solid #243447;border-radius:8px;color:#e2e8f0;font-size:.8rem;outline:none}
+.linea-input:focus{border-color:#3b82f6}
+.badge{display:inline-flex;align-items:center;padding:.2rem .6rem;border-radius:9999px;font-size:.75rem;font-weight:500}
+.badge-pendiente{background:rgba(245,158,11,.15);color:#fbbf24}
+.badge-aprobado{background:rgba(16,185,129,.15);color:#34d399}
+.badge-rechazado{background:rgba(239,68,68,.15);color:#f87171}
+.badge-cotizacion{background:rgba(59,130,246,.15);color:#60a5fa}
+.badge-orden_compra{background:rgba(139,92,246,.15);color:#a78bfa}
+.badge-factura{background:rgba(16,185,129,.15);color:#34d399}
+.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}
+@media(max-width:900px){.dash-grid{grid-template-columns:1fr}}
+@media print{.sidebar,.main-header,.no-print{display:none!important}.main-content{margin-left:0!important}}
+</style>
+
 <div class="app-container">
-    <!-- Sidebar -->
-    <aside class="sidebar">
-        <div class="sidebar-header">
-            <div class="sidebar-brand">
-                <div class="sidebar-logo">
-                    <i class="fas fa-file-invoice"></i>
-                </div>
-                <h1 class="sidebar-title">CotiFácil</h1>
-            </div>
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-brand">
+        <div class="sidebar-logo"><i class="fas fa-file-invoice"></i></div>
+        <h1 class="sidebar-title" id="app-title">CotiFácil</h1>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="#dashboard" class="nav-link active" data-page="dashboard"><i class="fas fa-home nav-icon"></i><span class="nav-text">Dashboard</span></a>
+      <a href="#clientes" class="nav-link" data-page="clientes"><i class="fas fa-users nav-icon"></i><span class="nav-text">Clientes</span></a>
+      <a href="#productos" class="nav-link" data-page="productos"><i class="fas fa-boxes nav-icon"></i><span class="nav-text">Productos</span></a>
+      <a href="#documentos" class="nav-link" data-page="documentos"><i class="fas fa-file-alt nav-icon"></i><span class="nav-text">Documentos</span></a>
+      <a href="#crear-documento" class="nav-link" data-page="crear-documento"><i class="fas fa-file-invoice-dollar nav-icon"></i><span class="nav-text">Crear Documento</span></a>
+      <a href="#reportes" class="nav-link" data-page="reportes"><i class="fas fa-chart-bar nav-icon"></i><span class="nav-text">Reportes</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-profile">
+        <div class="user-avatar"><i class="fas fa-user"></i></div>
+        <div class="user-info" id="user-info">
+          <p class="user-name">Cargando...</p>
+          <p class="user-email">Cargando...</p>
         </div>
-        <nav class="sidebar-nav">
-            <a href="#dashboard" class="nav-link active" data-page="dashboard">
-                <i class="fas fa-home nav-icon"></i>
-                <span class="nav-text">Dashboard</span>
-            </a>
-            <a href="#clientes" class="nav-link" data-page="clientes">
-                <i class="fas fa-users nav-icon"></i>
-                <span class="nav-text">Clientes</span>
-            </a>
-            <a href="#productos" class="nav-link" data-page="productos">
-                <i class="fas fa-boxes nav-icon"></i>
-                <span class="nav-text">Productos</span>
-            </a>
-            <a href="#documentos" class="nav-link" data-page="documentos">
-                <i class="fas fa-file-alt nav-icon"></i>
-                <span class="nav-text">Documentos</span>
-            </a>
-            <a href="#crear-documento" class="nav-link" data-page="crear-documento">
-                <i class="fas fa-file-invoice-dollar nav-icon"></i>
-                <span class="nav-text">Crear Documento</span>
-            </a>
-            <a href="#reportes" class="nav-link" data-page="reportes">
-                <i class="fas fa-chart-bar nav-icon"></i>
-                <span class="nav-text">Reportes</span>
-            </a>
-        </nav>
-        <div class="sidebar-footer">
-            <div class="user-profile">
-                <div class="user-avatar">
-                    <i class="fas fa-user"></i>
-                </div>
-                <div class="user-info" id="user-info">
-                    <p class="user-name">Cargando...</p>
-                    <p class="user-email">Cargando...</p>
-                </div>
-                <button class="logout-btn" id="logout-btn" title="Cerrar sesión">
-                    <i class="fas fa-sign-out-alt"></i>
-                </button>
+        <button class="logout-btn" id="logout-btn" title="Cerrar sesión"><i class="fas fa-sign-out-alt"></i></button>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header class="main-header">
+      <div class="header-content">
+        <h1 class="page-title">Dashboard</h1>
+        <div class="header-actions">
+          <div class="dropdown" id="dd-perfil">
+            <button class="header-user-btn" onclick="toggleDropdown('dd-perfil-menu')">
+              <div class="header-avatar-sm" id="header-avatar-initials">A</div>
+              <span id="header-username">Usuario</span>
+              <i class="fas fa-chevron-down" style="font-size:.65rem;"></i>
+            </button>
+            <div class="dropdown-menu" id="dd-perfil-menu">
+              <button class="dropdown-item" onclick="abrirPerfil();closeDropdowns();"><i class="fas fa-user-circle"></i> Mi Perfil</button>
+              <div class="dropdown-divider"></div>
+              <button class="dropdown-item danger" onclick="doLogout()"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</button>
             </div>
+          </div>
+          <button class="header-btn" onclick="abrirConfiguracion()" title="Configuración"><i class="fas fa-cog"></i></button>
         </div>
-    </aside>
+      </div>
+    </header>
 
-    <!-- Contenido principal -->
-    <main class="main-content">
-        <header class="main-header">
-            <div class="header-content">
-                <h1 class="page-title">Dashboard</h1>
-                <div class="header-actions">
-                    <button class="header-btn mobile-menu-btn hidden" title="Menú">
-                        <i class="fas fa-bars"></i>
-                    </button>
-                </div>
-            </div>
-        </header>
-        <div class="content-container">
-            <!-- Dashboard -->
-            <div id="dashboard-page" class="page-content active">
-                <div class="stats-grid">
-                    <div class="card stat-card">
-                        <div class="stat-icon bg-blue">
-                            <i class="fas fa-file-alt"></i>
-                        </div>
-                        <div class="stat-info">
-                            <p class="stat-label">Total Documentos</p>
-                            <p class="stat-value" data-stat="documents">0</p>
-                        </div>
-                    </div>
-                    <div class="card stat-card">
-                        <div class="stat-icon bg-green">
-                            <i class="fas fa-users"></i>
-                        </div>
-                        <div class="stat-info">
-                            <p class="stat-label">Total Clientes</p>
-                            <p class="stat-value" data-stat="clients">0</p>
-                        </div>
-                    </div>
-                    <div class="card stat-card">
-                        <div class="stat-icon bg-purple">
-                            <i class="fas fa-boxes"></i>
-                        </div>
-                        <div class="stat-info">
-                            <p class="stat-label">Total Productos</p>
-                            <p class="stat-value" data-stat="products">0</p>
-                        </div>
-                    </div>
-                    <div class="card stat-card">
-                        <div class="stat-icon bg-yellow">
-                            <i class="fas fa-dollar-sign"></i>
-                        </div>
-                        <div class="stat-info">
-                            <p class="stat-label">Ventas Totales</p>
-                            <p class="stat-value" data-stat="sales">$0</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="card">
-                    <h2 class="text-lg font-semibold mb-4">Documentos Recientes</h2>
-                    <div id="recent-docs"><p class="text-gray-400 text-sm">Cargando...</p></div>
-                </div>
-            </div>
+    <div class="content-container">
 
-            <!-- Página de Clientes -->
-            <div id="clientes-page" class="page-content hidden">
-                <div class="card">
-                    <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-xl font-semibold">Lista de Clientes</h2>
-                        <div class="flex gap-4">
-                            <button class="btn-primary" onclick="crearCliente()">
-                                <i class="fas fa-plus"></i> Nuevo Cliente
-                            </button>
-                            <button class="btn-secondary" onclick="exportarClientes()">
-                                <i class="fas fa-download"></i> Exportar
-                            </button>
-                        </div>
-                    </div>
-                    <div class="search-wrapper">
-                        <input type="text" id="client-search" placeholder="Buscar clientes...">
-                    </div>
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>RUT</th>
-                                    <th>Razón Social</th>
-                                    <th>Dirección</th>
-                                    <th>Región</th>
-                                    <th>Ciudad</th>
-                                    <th>Contactos</th>
-                                    <th>Documentos</th>
-                                    <th>Total</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="clients-table-body"></tbody>
-                        </table>
-                    </div>
-                </div>
-                <!-- Modal para clientes -->
-                <div id="cliente-modal" class="modal">
-                    <div class="modal-backdrop" onclick="hideModal('cliente-modal')"></div>
-                    <div class="modal-content">
-                        <div class="modal-inner">
-                            <div class="modal-header">
-                                <h2 class="modal-title" id="cliente-modal-title">Nuevo Cliente</h2>
-                                <button class="modal-close" onclick="hideModal('cliente-modal')">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                            <div class="modal-body">
-                                <form id="cliente-form" class="space-y-4">
-                                    <input type="hidden" id="cliente-id">
-                                    <div>
-                                        <label for="rut" class="block text-sm font-medium mb-1">RUT</label>
-                                        <input type="text" id="rut" class="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" required>
-                                    </div>
-                                    <div>
-                                        <label for="razon-social" class="block text-sm font-medium mb-1">Razón Social</label>
-                                        <input type="text" id="razon-social" class="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" required>
-                                    </div>
-                                    <div>
-                                        <label for="direccion" class="block text-sm font-medium mb-1">Dirección</label>
-                                        <input type="text" id="direccion" class="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white">
-                                    </div>
-                                    <div>
-                                        <label for="region" class="block text-sm font-medium mb-1">Región</label>
-                                        <input type="text" id="region" class="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white">
-                                    </div>
-                                    <div>
-                                        <label for="ciudad" class="block text-sm font-medium mb-1">Ciudad</label>
-                                        <input type="text" id="ciudad" class="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white">
-                                    </div>
-                                    <div>
-                                        <label for="telefono" class="block text-sm font-medium mb-1">Teléfono</label>
-                                        <input type="text" id="telefono" class="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white">
-                                    </div>
-                                    <div>
-                                        <label for="email" class="block text-sm font-medium mb-1">Email</label>
-                                        <input type="email" id="email" class="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white">
-                                    </div>
-                                    <div>
-                                        <label for="nota" class="block text-sm font-medium mb-1">Notas</label>
-                                        <textarea id="nota" class="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white"></textarea>
-                                    </div>
-                                    <div class="flex justify-end gap-2">
-                                        <button type="button" class="btn-secondary" onclick="hideModal('cliente-modal')">Cancelar</button>
-                                        <button type="submit" class="btn-primary">Guardar</button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Página de Productos -->
-            <div id="productos-page" class="page-content hidden">
-                <div class="card">
-                    <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-xl font-semibold">Lista de Productos</h2>
-                        <button class="btn-primary" onclick="crearProducto()">
-                            <i class="fas fa-plus"></i> Nuevo Producto
-                        </button>
-                    </div>
-                    <div class="search-wrapper">
-                        <input type="text" id="product-search" placeholder="Buscar productos...">
-                    </div>
-                    <div class="stats-grid mb-6">
-                        <div class="card stat-card">
-                            <div class="stat-icon bg-blue">
-                                <i class="fas fa-boxes"></i>
-                            </div>
-                            <div class="stat-info">
-                                <p class="stat-label">Total Productos</p>
-                                <p class="stat-value" id="total-products">0</p>
-                            </div>
-                        </div>
-                        <div class="card stat-card">
-                            <div class="stat-icon bg-purple">
-                                <i class="fas fa-tags"></i>
-                            </div>
-                            <div class="stat-info">
-                                <p class="stat-label">Categorías</p>
-                                <p class="stat-value" id="total-categories">0</p>
-                            </div>
-                        </div>
-                        <div class="card stat-card">
-                            <div class="stat-icon bg-green">
-                                <i class="fas fa-dollar-sign"></i>
-                            </div>
-                            <div class="stat-info">
-                                <p class="stat-label">Valor Total</p>
-                                <p class="stat-value" id="total-value">$0</p>
-                            </div>
-                        </div>
-                        <div class="card stat-card">
-                            <div class="stat-icon bg-red">
-                                <i class="fas fa-exclamation-triangle"></i>
-                            </div>
-                            <div class="stat-info">
-                                <p class="stat-label">Stock Bajo</p>
-                                <p class="stat-value" id="low-stock-count">0</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="table-container">
-                        <table id="products-table">
-                            <thead>
-                                <tr>
-                                    <th>SKU</th>
-                                    <th>Nombre</th>
-                                    <th>Categoría</th>
-                                    <th>Proveedor</th>
-                                    <th>Precio</th>
-                                    <th>Stock</th>
-                                    <th>Stock Mínimo</th>
-                                    <th>Estado</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="products-table-body"></tbody>
-                        </table>
-                    </div>
-                </div>
-                <!-- Modal para productos -->
-                <div id="producto-modal" class="modal">
-                    <div class="modal-backdrop" onclick="hideModal('producto-modal')"></div>
-                    <div class="modal-content">
-                        <div class="modal-inner">
-                            <div class="modal-header">
-                                <h2 class="modal-title" id="producto-modal-title">Nuevo Producto</h2>
-                                <button class="modal-close" onclick="hideModal('producto-modal')">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                            <div class="modal-body">
-                                <form id="producto-form" class="space-y-4">
-                                    <input type="hidden" id="producto-id">
-                                    <div>
-                                        <label for="sku" class="block text-sm font-medium mb-1">SKU</label>
-                                        <input type="text" id="sku" class="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" required>
-                                    </div>
-                                    <div>
-                                        <label for="nombre" class="block text-sm font-medium mb-1">Nombre</label>
-                                        <input type="text" id="nombre" class="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" required>
-                                    </div>
-                                    <div>
-                                        <label for="precio" class="block text-sm font-medium mb-1">Precio</label>
-                                        <input type="number" id="precio" class="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" required>
-                                    </div>
-                                    <div>
-                                        <label for="stock" class="block text-sm font-medium mb-1">Stock</label>
-                                        <input type="number" id="stock" class="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" required>
-                                    </div>
-                                    <div>
-                                        <label for="stock_minimo" class="block text-sm font-medium mb-1">Stock Mínimo</label>
-                                        <input type="number" id="stock_minimo" class="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" required>
-                                    </div>
-                                    <div>
-                                        <label for="categoria" class="block text-sm font-medium mb-1">Categoría</label>
-                                        <input type="text" id="categoria" class="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white">
-                                    </div>
-                                    <div>
-                                        <label for="proveedor" class="block text-sm font-medium mb-1">Proveedor</label>
-                                        <input type="text" id="proveedor" class="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white">
-                                    </div>
-                                    <div class="flex justify-end gap-2">
-                                        <button type="button" class="btn-secondary" onclick="hideModal('producto-modal')">Cancelar</button>
-                                        <button type="submit" class="btn-primary">Guardar</button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Página de Documentos -->
-            <div id="documentos-page" class="page-content hidden">
-                <div class="card">
-                    <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-xl font-semibold">Lista de Documentos</h2>
-                    </div>
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Número</th>
-                                    <th>Fecha</th>
-                                    <th>Cliente</th>
-                                    <th>Total</th>
-                                    <th>Estado</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="documents-table-body"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Página de Crear Documento (placeholder) -->
-            <div id="crear-documento-page" class="page-content hidden">
-                <div class="card">
-                    <h2 class="text-xl font-semibold mb-6">Crear Documento</h2>
-                    <p class="text-gray-400">Funcionalidad de crear documento en desarrollo.</p>
-                </div>
-            </div>
-
-            <!-- Página de Reportes -->
-            <div id="reportes-page" class="page-content hidden">
-                <div id="reportes-content">
-                    <p class="text-gray-400">Cargando reportes...</p>
-                </div>
-            </div>
+      <!-- DASHBOARD -->
+      <div id="dashboard-page" class="page-content active">
+        <div class="stats-grid">
+          <div class="card stat-card"><div class="stat-icon bg-blue"><i class="fas fa-file-alt"></i></div><div class="stat-info"><p class="stat-label">Total Documentos</p><p class="stat-value" data-stat="documents">0</p></div></div>
+          <div class="card stat-card"><div class="stat-icon bg-green"><i class="fas fa-users"></i></div><div class="stat-info"><p class="stat-label">Total Clientes</p><p class="stat-value" data-stat="clients">0</p></div></div>
+          <div class="card stat-card"><div class="stat-icon bg-purple"><i class="fas fa-boxes"></i></div><div class="stat-info"><p class="stat-label">Total Productos</p><p class="stat-value" data-stat="products">0</p></div></div>
+          <div class="card stat-card"><div class="stat-icon bg-yellow"><i class="fas fa-dollar-sign"></i></div><div class="stat-info"><p class="stat-label">Ventas Totales</p><p class="stat-value" data-stat="sales">$0</p></div></div>
         </div>
-    </main>
+        <div class="dash-grid">
+          <div class="card"><h2 class="text-lg font-semibold mb-4">Documentos Recientes</h2><div id="recent-docs"><p class="text-gray-400 text-sm">Cargando...</p></div></div>
+          <div class="card"><h2 class="text-lg font-semibold mb-4">Resumen por Tipo</h2><div id="doc-type-summary"><p class="text-gray-400 text-sm">Cargando...</p></div></div>
+        </div>
+      </div>
+
+      <!-- CLIENTES -->
+      <div id="clientes-page" class="page-content hidden">
+        <div class="card">
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-xl font-semibold">Lista de Clientes</h2>
+            <div class="flex gap-4">
+              <button class="btn-primary" onclick="crearCliente()"><i class="fas fa-plus"></i> Nuevo Cliente</button>
+              <button class="btn-secondary" onclick="importarClientes()"><i class="fas fa-upload"></i> Importar CSV</button>
+              <button class="btn-secondary" onclick="exportarClientes()"><i class="fas fa-download"></i> Exportar CSV</button>
+            </div>
+          </div>
+          <div class="search-wrapper"><input type="text" id="client-search" placeholder="Buscar por nombre, RUT, ciudad..."></div>
+          <div class="table-container">
+            <table>
+              <thead><tr><th>RUT</th><th>Razón Social</th><th>Región</th><th>Ciudad</th><th>Contacto</th><th>Docs</th><th>Total</th><th>Acciones</th></tr></thead>
+              <tbody id="clients-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="cliente-modal" class="modal">
+          <div class="modal-backdrop" onclick="hideModal('cliente-modal')"></div>
+          <div class="modal-content modal-content-lg">
+            <div class="modal-inner">
+              <div class="modal-header">
+                <h2 class="modal-title" id="cliente-modal-title">Nuevo Cliente</h2>
+                <button class="modal-close" onclick="hideModal('cliente-modal')"><i class="fas fa-times"></i></button>
+              </div>
+              <div class="modal-body" style="max-height:72vh;overflow-y:auto;">
+                <form id="cliente-form">
+                  <input type="hidden" id="cliente-id">
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                    <div><label class="modal-label">RUT *</label><input type="text" id="rut" class="modal-input" placeholder="12.345.678-9" required></div>
+                    <div><label class="modal-label">Razón Social *</label><input type="text" id="razon-social" class="modal-input" placeholder="Empresa S.A." required></div>
+                    <div style="grid-column:1/-1;"><label class="modal-label">Dirección</label><input type="text" id="direccion" class="modal-input" placeholder="Av. Ejemplo 123, Santiago"></div>
+                    <div>
+                      <label class="modal-label">Región</label>
+                      <select id="region" class="modal-input">
+                        <option value="">— Seleccionar —</option>
+                        <option>Arica y Parinacota</option><option>Tarapacá</option><option>Antofagasta</option>
+                        <option>Atacama</option><option>Coquimbo</option><option>Valparaíso</option>
+                        <option>Metropolitana de Santiago</option><option>O'Higgins</option><option>Maule</option>
+                        <option>Ñuble</option><option>Biobío</option><option>La Araucanía</option>
+                        <option>Los Ríos</option><option>Los Lagos</option><option>Aysén</option><option>Magallanes</option>
+                      </select>
+                    </div>
+                    <div><label class="modal-label">Ciudad</label><input type="text" id="ciudad" class="modal-input" placeholder="Santiago"></div>
+                    <div><label class="modal-label">Teléfono</label><input type="text" id="telefono" class="modal-input" placeholder="+56 9 1234 5678"></div>
+                    <div><label class="modal-label">Email</label><input type="email" id="email" class="modal-input" placeholder="contacto@empresa.cl"></div>
+                    <div style="grid-column:1/-1;"><label class="modal-label">Notas</label><textarea id="nota" class="modal-input" rows="2" placeholder="Observaciones, giro, condiciones..."></textarea></div>
+                  </div>
+                  <div class="flex justify-end gap-2" style="margin-top:1.25rem;">
+                    <button type="button" class="btn-secondary" onclick="hideModal('cliente-modal')">Cancelar</button>
+                    <button type="submit" class="btn-primary">Guardar</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="import-clientes-modal" class="modal">
+          <div class="modal-backdrop" onclick="hideModal('import-clientes-modal')"></div>
+          <div class="modal-content">
+            <div class="modal-inner">
+              <div class="modal-header">
+                <h2 class="modal-title">Importar Clientes CSV</h2>
+                <button class="modal-close" onclick="hideModal('import-clientes-modal')"><i class="fas fa-times"></i></button>
+              </div>
+              <div class="modal-body">
+                <p style="color:#94a3b8;font-size:.83rem;margin-bottom:1rem;line-height:1.6;">Columnas requeridas (en orden):<br><strong style="color:#e2e8f0;">RUT, Razón Social, Dirección, Región, Ciudad, Email, Teléfono, Nota</strong></p>
+                <div class="upload-zone" onclick="document.getElementById('csv-clientes-input').click()">
+                  <i class="fas fa-file-csv" style="font-size:2rem;color:#3b82f6;margin-bottom:.5rem;display:block;"></i>
+                  <p style="color:#e2e8f0;font-weight:500;margin-bottom:.25rem;">Haz clic para seleccionar archivo</p>
+                  <p style="color:#64748b;font-size:.8rem;">Solo archivos .csv</p>
+                </div>
+                <input type="file" id="csv-clientes-input" accept=".csv" style="display:none" onchange="handleClientesCSV(this)">
+                <div id="csv-clientes-preview" style="margin-top:1rem;display:none;">
+                  <p id="csv-clientes-info" style="color:#86efac;font-size:.875rem;margin-bottom:.75rem;"></p>
+                  <div class="flex justify-end gap-2">
+                    <button class="btn-secondary" onclick="hideModal('import-clientes-modal')">Cancelar</button>
+                    <button class="btn-primary" onclick="confirmarImportarClientes()"><i class="fas fa-upload"></i> Importar</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PRODUCTOS -->
+      <div id="productos-page" class="page-content hidden">
+        <div class="card">
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-xl font-semibold">Lista de Productos</h2>
+            <div class="flex gap-4">
+              <button class="btn-primary" onclick="crearProducto()"><i class="fas fa-plus"></i> Nuevo Producto</button>
+              <button class="btn-secondary" onclick="importarProductos()"><i class="fas fa-upload"></i> Importar CSV</button>
+            </div>
+          </div>
+          <div class="search-wrapper"><input type="text" id="product-search" placeholder="Buscar por nombre, SKU, categoría..."></div>
+          <div class="stats-grid mb-6">
+            <div class="card stat-card"><div class="stat-icon bg-blue"><i class="fas fa-boxes"></i></div><div class="stat-info"><p class="stat-label">Total Productos</p><p class="stat-value" id="total-products">0</p></div></div>
+            <div class="card stat-card"><div class="stat-icon bg-purple"><i class="fas fa-tags"></i></div><div class="stat-info"><p class="stat-label">Categorías</p><p class="stat-value" id="total-categories">0</p></div></div>
+            <div class="card stat-card"><div class="stat-icon bg-green"><i class="fas fa-dollar-sign"></i></div><div class="stat-info"><p class="stat-label">Valor Total Stock</p><p class="stat-value" id="total-value">$0</p></div></div>
+            <div class="card stat-card"><div class="stat-icon bg-red"><i class="fas fa-exclamation-triangle"></i></div><div class="stat-info"><p class="stat-label">Stock Bajo</p><p class="stat-value" id="low-stock-count">0</p></div></div>
+          </div>
+          <div class="table-container">
+            <table>
+              <thead><tr><th>SKU</th><th>Nombre</th><th>Categoría</th><th>Proveedor</th><th>Precio</th><th>Stock</th><th>Mín.</th><th>Estado</th><th>Acciones</th></tr></thead>
+              <tbody id="products-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="producto-modal" class="modal">
+          <div class="modal-backdrop" onclick="hideModal('producto-modal')"></div>
+          <div class="modal-content modal-content-lg">
+            <div class="modal-inner">
+              <div class="modal-header">
+                <h2 class="modal-title" id="producto-modal-title">Nuevo Producto</h2>
+                <button class="modal-close" onclick="hideModal('producto-modal')"><i class="fas fa-times"></i></button>
+              </div>
+              <div class="modal-body" style="max-height:72vh;overflow-y:auto;">
+                <form id="producto-form">
+                  <input type="hidden" id="producto-id">
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                    <div><label class="modal-label">SKU *</label><input type="text" id="sku" class="modal-input" placeholder="PROD-001" required></div>
+                    <div><label class="modal-label">Nombre *</label><input type="text" id="nombre" class="modal-input" placeholder="Nombre del producto" required></div>
+                    <div><label class="modal-label">Precio (CLP) *</label><input type="number" id="precio" class="modal-input" placeholder="0" min="0" required></div>
+                    <div><label class="modal-label">Categoría</label><input type="text" id="categoria" class="modal-input" placeholder="Electrónica, Servicios..."></div>
+                    <div><label class="modal-label">Stock *</label><input type="number" id="stock" class="modal-input" placeholder="0" min="0" required></div>
+                    <div><label class="modal-label">Stock Mínimo *</label><input type="number" id="stock_minimo" class="modal-input" placeholder="5" min="0" required></div>
+                    <div style="grid-column:1/-1;"><label class="modal-label">Proveedor</label><input type="text" id="proveedor" class="modal-input" placeholder="Nombre del proveedor"></div>
+                    <div style="grid-column:1/-1;"><label class="modal-label">Descripción</label><textarea id="descripcion-producto" class="modal-input" rows="2" placeholder="Descripción breve del producto..."></textarea></div>
+                  </div>
+                  <div class="flex justify-end gap-2" style="margin-top:1.25rem;">
+                    <button type="button" class="btn-secondary" onclick="hideModal('producto-modal')">Cancelar</button>
+                    <button type="submit" class="btn-primary">Guardar</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="import-productos-modal" class="modal">
+          <div class="modal-backdrop" onclick="hideModal('import-productos-modal')"></div>
+          <div class="modal-content">
+            <div class="modal-inner">
+              <div class="modal-header">
+                <h2 class="modal-title">Importar Productos CSV</h2>
+                <button class="modal-close" onclick="hideModal('import-productos-modal')"><i class="fas fa-times"></i></button>
+              </div>
+              <div class="modal-body">
+                <p style="color:#94a3b8;font-size:.83rem;margin-bottom:1rem;line-height:1.6;">Columnas requeridas (en orden):<br><strong style="color:#e2e8f0;">SKU, Nombre, Precio, Stock, Stock Mínimo, Categoría, Proveedor</strong></p>
+                <div class="upload-zone" onclick="document.getElementById('csv-productos-input').click()">
+                  <i class="fas fa-file-csv" style="font-size:2rem;color:#3b82f6;margin-bottom:.5rem;display:block;"></i>
+                  <p style="color:#e2e8f0;font-weight:500;margin-bottom:.25rem;">Haz clic para seleccionar archivo</p>
+                  <p style="color:#64748b;font-size:.8rem;">Solo archivos .csv</p>
+                </div>
+                <input type="file" id="csv-productos-input" accept=".csv" style="display:none" onchange="handleProductosCSV(this)">
+                <div id="csv-productos-preview" style="margin-top:1rem;display:none;">
+                  <p id="csv-productos-info" style="color:#86efac;font-size:.875rem;margin-bottom:.75rem;"></p>
+                  <div class="flex justify-end gap-2">
+                    <button class="btn-secondary" onclick="hideModal('import-productos-modal')">Cancelar</button>
+                    <button class="btn-primary" onclick="confirmarImportarProductos()"><i class="fas fa-upload"></i> Importar</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DOCUMENTOS -->
+      <div id="documentos-page" class="page-content hidden">
+        <div class="card">
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-xl font-semibold">Lista de Documentos</h2>
+            <div class="flex gap-2">
+              <select id="doc-filter-tipo" class="modal-input" style="width:auto;padding:.5rem 2rem .5rem .75rem;margin:0;" onchange="filtrarDocumentos()">
+                <option value="">Todos los tipos</option>
+                <option value="cotizacion">Cotización</option>
+                <option value="orden_compra">Orden de Compra</option>
+                <option value="factura">Factura</option>
+              </select>
+              <select id="doc-filter-estado" class="modal-input" style="width:auto;padding:.5rem 2rem .5rem .75rem;margin:0;" onchange="filtrarDocumentos()">
+                <option value="">Todos los estados</option>
+                <option value="pendiente">Pendiente</option>
+                <option value="aprobado">Aprobado</option>
+                <option value="rechazado">Rechazado</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-container">
+            <table>
+              <thead><tr><th>Número</th><th>Tipo</th><th>Fecha</th><th>Cliente</th><th>Total</th><th>Estado</th><th>Acciones</th></tr></thead>
+              <tbody id="documents-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+        <div id="ver-documento-modal" class="modal">
+          <div class="modal-backdrop" onclick="hideModal('ver-documento-modal')"></div>
+          <div class="modal-content modal-content-xl">
+            <div class="modal-inner">
+              <div class="modal-header no-print">
+                <h2 class="modal-title" id="ver-doc-title">Documento</h2>
+                <div class="flex gap-2">
+                  <button class="btn-secondary" onclick="window.print()"><i class="fas fa-print"></i> Imprimir</button>
+                  <button class="modal-close" onclick="hideModal('ver-documento-modal')"><i class="fas fa-times"></i></button>
+                </div>
+              </div>
+              <div class="modal-body" style="max-height:80vh;overflow-y:auto;">
+                <div id="doc-preview-content" class="doc-preview"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CREAR DOCUMENTO -->
+      <div id="crear-documento-page" class="page-content hidden">
+        <div class="card" style="margin-bottom:1.5rem;">
+          <h2 class="text-xl font-semibold mb-1">Nuevo Documento</h2>
+          <p style="color:#64748b;font-size:.875rem;margin-bottom:1.5rem;">Selecciona el tipo de documento</p>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;">
+            <div class="doc-type-card" id="tipo-cotizacion" onclick="seleccionarTipoDoc('cotizacion')">
+              <i class="fas fa-file-invoice" style="font-size:1.75rem;color:#60a5fa;display:block;margin-bottom:.5rem;"></i>
+              <p style="font-weight:600;color:#e2e8f0;margin-bottom:.2rem;">Cotización</p>
+              <p style="font-size:.78rem;color:#64748b;">Propuesta de precio</p>
+            </div>
+            <div class="doc-type-card" id="tipo-orden_compra" onclick="seleccionarTipoDoc('orden_compra')">
+              <i class="fas fa-shopping-cart" style="font-size:1.75rem;color:#a78bfa;display:block;margin-bottom:.5rem;"></i>
+              <p style="font-weight:600;color:#e2e8f0;margin-bottom:.2rem;">Orden de Compra</p>
+              <p style="font-size:.78rem;color:#64748b;">Solicitud de compra</p>
+            </div>
+            <div class="doc-type-card" id="tipo-factura" onclick="seleccionarTipoDoc('factura')">
+              <i class="fas fa-receipt" style="font-size:1.75rem;color:#34d399;display:block;margin-bottom:.5rem;"></i>
+              <p style="font-weight:600;color:#e2e8f0;margin-bottom:.2rem;">Factura</p>
+              <p style="font-size:.78rem;color:#64748b;">Documento de cobro</p>
+            </div>
+          </div>
+          <input type="hidden" id="doc-tipo" value="">
+        </div>
+        <div id="doc-form-container" style="display:none;">
+          <div style="display:grid;grid-template-columns:1.1fr .9fr;gap:1.5rem;">
+            <div>
+              <div class="card">
+                <h3 style="font-size:.78rem;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:1rem;">Datos del Documento</h3>
+                <div style="display:flex;flex-direction:column;gap:.75rem;">
+                  <div><label class="modal-label">Cliente *</label><select id="doc-cliente" class="modal-input" onchange="actualizarPreview()"><option value="">— Seleccionar cliente —</option></select></div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">
+                    <div><label class="modal-label">Fecha</label><input type="date" id="doc-fecha" class="modal-input" onchange="actualizarPreview()"></div>
+                    <div><label class="modal-label">Válido (días)</label><input type="number" id="doc-validez" class="modal-input" value="30" onchange="actualizarPreview()"></div>
+                  </div>
+                  <div><label class="modal-label">Notas / Condiciones</label><textarea id="doc-notas" class="modal-input" rows="2" placeholder="Condiciones de pago, entrega..." onkeyup="actualizarPreview()"></textarea></div>
+                </div>
+              </div>
+              <div class="card" style="margin-top:1.5rem;">
+                <div class="flex justify-between items-center mb-4">
+                  <h3 style="font-size:.78rem;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;">Productos / Servicios</h3>
+                  <button class="btn-secondary" onclick="agregarLineaDoc()" style="padding:.4rem .75rem;font-size:.8rem;margin:0;"><i class="fas fa-plus"></i> Agregar</button>
+                </div>
+                <div id="doc-lineas"></div>
+                <div style="margin-top:1rem;padding-top:.75rem;border-top:1px solid #1e2d3d;">
+                  <div style="display:flex;justify-content:space-between;margin-bottom:.3rem;font-size:.875rem;"><span style="color:#94a3b8;">Subtotal</span><span id="doc-subtotal">$0</span></div>
+                  <div style="display:flex;justify-content:space-between;margin-bottom:.3rem;font-size:.875rem;"><span style="color:#94a3b8;">IVA (19%)</span><span id="doc-iva">$0</span></div>
+                  <div style="display:flex;justify-content:space-between;padding-top:.5rem;border-top:1px solid #1e2d3d;font-weight:700;"><span>Total</span><span id="doc-total" style="color:#3b82f6;font-size:1.1rem;">$0</span></div>
+                </div>
+                <div class="flex justify-end gap-2" style="margin-top:1.25rem;">
+                  <button class="btn-secondary" onclick="limpiarFormDoc()">Limpiar</button>
+                  <button class="btn-primary" onclick="guardarDocumento()"><i class="fas fa-save"></i> Guardar</button>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <h3 style="font-size:.78rem;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:1rem;">Vista Previa</h3>
+              <div id="doc-live-preview" class="doc-preview" style="min-height:350px;"><p style="color:#9ca3af;text-align:center;padding:3rem 0;font-size:.875rem;">Selecciona tipo y completa los datos para ver la vista previa</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- REPORTES -->
+      <div id="reportes-page" class="page-content hidden">
+        <div id="reportes-content"><p class="text-gray-400">Cargando reportes...</p></div>
+      </div>
+
+    </div>
+  </main>
 </div>
+
+<!-- MODAL PERFIL -->
+<div id="perfil-modal" class="modal">
+  <div class="modal-backdrop" onclick="hideModal('perfil-modal')"></div>
+  <div class="modal-content">
+    <div class="modal-inner">
+      <div class="modal-header">
+        <h2 class="modal-title">Mi Perfil</h2>
+        <button class="modal-close" onclick="hideModal('perfil-modal')"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <div style="text-align:center;margin-bottom:1.5rem;">
+          <div id="perfil-avatar" style="width:68px;height:68px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#1d4ed8);display:flex;align-items:center;justify-content:center;font-size:1.6rem;color:white;font-weight:700;margin:0 auto .5rem;"></div>
+        </div>
+        <form id="perfil-form" style="display:flex;flex-direction:column;gap:.75rem;">
+          <div><label class="modal-label">Nombre</label><input type="text" id="perfil-nombre" class="modal-input" placeholder="Tu nombre completo"></div>
+          <div><label class="modal-label">Email</label><input type="email" id="perfil-email" class="modal-input" placeholder="tu@email.com"></div>
+          <div style="border-top:1px solid #1e2d3d;padding-top:1rem;margin-top:.25rem;">
+            <p style="color:#64748b;font-size:.78rem;margin-bottom:.75rem;">Cambiar contraseña — dejar vacío para mantener la actual</p>
+            <div style="display:flex;flex-direction:column;gap:.6rem;">
+              <div><label class="modal-label">Contraseña actual</label><input type="password" id="perfil-pwd-actual" class="modal-input" placeholder="••••••••"></div>
+              <div><label class="modal-label">Nueva contraseña</label><input type="password" id="perfil-pwd-nueva" class="modal-input" placeholder="••••••••"></div>
+            </div>
+          </div>
+          <div class="flex justify-end gap-2" style="margin-top:.5rem;">
+            <button type="button" class="btn-secondary" onclick="hideModal('perfil-modal')">Cancelar</button>
+            <button type="submit" class="btn-primary">Guardar Cambios</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONFIGURACIÓN -->
+<div id="config-modal" class="modal">
+  <div class="modal-backdrop" onclick="hideModal('config-modal')"></div>
+  <div class="modal-content modal-content-lg">
+    <div class="modal-inner">
+      <div class="modal-header">
+        <h2 class="modal-title"><i class="fas fa-cog" style="margin-right:.5rem;color:#3b82f6;"></i>Configuración</h2>
+        <button class="modal-close" onclick="hideModal('config-modal')"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body" style="max-height:78vh;overflow-y:auto;">
+        <div style="display:flex;gap:1.5rem;">
+          <div style="width:145px;flex-shrink:0;display:flex;flex-direction:column;gap:.25rem;">
+            <button class="cfg-tab active" onclick="mostrarCfgPanel('empresa')" id="cfgtab-empresa"><i class="fas fa-building" style="margin-right:.4rem;width:14px;"></i>Empresa</button>
+            <button class="cfg-tab" onclick="mostrarCfgPanel('documentos')" id="cfgtab-documentos"><i class="fas fa-file-alt" style="margin-right:.4rem;width:14px;"></i>Documentos</button>
+            <button class="cfg-tab" onclick="mostrarCfgPanel('clientes')" id="cfgtab-clientes"><i class="fas fa-users" style="margin-right:.4rem;width:14px;"></i>Clientes</button>
+            <button class="cfg-tab" onclick="mostrarCfgPanel('productos')" id="cfgtab-productos"><i class="fas fa-boxes" style="margin-right:.4rem;width:14px;"></i>Productos</button>
+            <button class="cfg-tab" onclick="mostrarCfgPanel('ventas')" id="cfgtab-ventas"><i class="fas fa-chart-line" style="margin-right:.4rem;width:14px;"></i>Ventas</button>
+            <button class="cfg-tab" onclick="mostrarCfgPanel('apariencia')" id="cfgtab-apariencia"><i class="fas fa-palette" style="margin-right:.4rem;width:14px;"></i>Apariencia</button>
+          </div>
+          <div style="flex:1;min-width:0;">
+            <!-- Empresa -->
+            <div class="cfg-panel active" id="cfgpanel-empresa">
+              <div class="cfg-section">
+                <p class="cfg-section-title">Datos de la Empresa</p>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">
+                  <div style="grid-column:1/-1;"><label class="modal-label">Razón Social</label><input type="text" id="cfg-empresa-nombre" class="modal-input" placeholder="Mi Empresa S.A."></div>
+                  <div><label class="modal-label">RUT</label><input type="text" id="cfg-empresa-rut" class="modal-input" placeholder="76.000.000-0"></div>
+                  <div><label class="modal-label">Teléfono</label><input type="text" id="cfg-empresa-telefono" class="modal-input" placeholder="+56 2 1234 5678"></div>
+                  <div style="grid-column:1/-1;"><label class="modal-label">Dirección</label><input type="text" id="cfg-empresa-direccion" class="modal-input" placeholder="Av. Ejemplo 123, Santiago"></div>
+                  <div style="grid-column:1/-1;"><label class="modal-label">Email comercial</label><input type="email" id="cfg-empresa-email" class="modal-input" placeholder="contacto@empresa.cl"></div>
+                  <div style="grid-column:1/-1;">
+                    <label class="modal-label">Logo (se mostrará en documentos)</label>
+                    <div class="upload-zone" onclick="document.getElementById('logo-input').click()" style="padding:1rem;">
+                      <div id="logo-preview-container"><i class="fas fa-image" style="font-size:1.5rem;color:#3b82f6;display:block;margin-bottom:.35rem;"></i><p style="color:#94a3b8;font-size:.8rem;">Subir logo PNG/JPG</p></div>
+                    </div>
+                    <input type="file" id="logo-input" accept="image/*" style="display:none" onchange="handleLogoUpload(this)">
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- Documentos -->
+            <div class="cfg-panel" id="cfgpanel-documentos">
+              <div class="cfg-section">
+                <p class="cfg-section-title">Numeración</p>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">
+                  <div><label class="modal-label">Prefijo Cotización</label><input type="text" id="cfg-prefijo-cot" class="modal-input" value="COT-"></div>
+                  <div><label class="modal-label">Prefijo Orden de Compra</label><input type="text" id="cfg-prefijo-oc" class="modal-input" value="OC-"></div>
+                  <div><label class="modal-label">Prefijo Factura</label><input type="text" id="cfg-prefijo-fac" class="modal-input" value="FAC-"></div>
+                  <div><label class="modal-label">Válido por defecto (días)</label><input type="number" id="cfg-validez" class="modal-input" value="30"></div>
+                </div>
+              </div>
+              <div class="cfg-section">
+                <p class="cfg-section-title">Opciones</p>
+                <div class="toggle-wrap"><span style="font-size:.875rem;color:#e2e8f0;">Incluir IVA (19%) automáticamente</span><label class="toggle"><input type="checkbox" id="cfg-incluir-iva" checked><span class="toggle-slider"></span></label></div>
+                <div class="toggle-wrap"><span style="font-size:.875rem;color:#e2e8f0;">Mostrar logo en documentos</span><label class="toggle"><input type="checkbox" id="cfg-mostrar-logo" checked><span class="toggle-slider"></span></label></div>
+                <div class="toggle-wrap"><span style="font-size:.875rem;color:#e2e8f0;">Mostrar datos empresa en documentos</span><label class="toggle"><input type="checkbox" id="cfg-mostrar-empresa" checked><span class="toggle-slider"></span></label></div>
+              </div>
+              <div class="cfg-section">
+                <p class="cfg-section-title">Pie de página</p>
+                <textarea id="cfg-pie-pagina" class="modal-input" rows="2" placeholder="Gracias por su preferencia..."></textarea>
+              </div>
+            </div>
+            <!-- Clientes -->
+            <div class="cfg-panel" id="cfgpanel-clientes">
+              <div class="cfg-section">
+                <p class="cfg-section-title">Campos requeridos</p>
+                <div class="toggle-wrap"><span style="font-size:.875rem;color:#e2e8f0;">RUT obligatorio</span><label class="toggle"><input type="checkbox" id="cfg-rut-req" checked><span class="toggle-slider"></span></label></div>
+                <div class="toggle-wrap"><span style="font-size:.875rem;color:#e2e8f0;">Email obligatorio</span><label class="toggle"><input type="checkbox" id="cfg-email-req"><span class="toggle-slider"></span></label></div>
+                <div class="toggle-wrap"><span style="font-size:.875rem;color:#e2e8f0;">Teléfono obligatorio</span><label class="toggle"><input type="checkbox" id="cfg-tel-req"><span class="toggle-slider"></span></label></div>
+              </div>
+              <div class="cfg-section">
+                <p class="cfg-section-title">Opciones</p>
+                <div class="toggle-wrap"><span style="font-size:.875rem;color:#e2e8f0;">Evitar duplicados por RUT</span><label class="toggle"><input type="checkbox" id="cfg-no-dup-rut" checked><span class="toggle-slider"></span></label></div>
+                <div class="toggle-wrap"><span style="font-size:.875rem;color:#e2e8f0;">Mostrar historial de documentos</span><label class="toggle"><input type="checkbox" id="cfg-historial-cli" checked><span class="toggle-slider"></span></label></div>
+              </div>
+            </div>
+            <!-- Productos -->
+            <div class="cfg-panel" id="cfgpanel-productos">
+              <div class="cfg-section">
+                <p class="cfg-section-title">Control de stock</p>
+                <div class="toggle-wrap"><span style="font-size:.875rem;color:#e2e8f0;">Alertar cuando stock llegue al mínimo</span><label class="toggle"><input type="checkbox" id="cfg-alerta-stock" checked><span class="toggle-slider"></span></label></div>
+                <div class="toggle-wrap"><span style="font-size:.875rem;color:#e2e8f0;">Descontar stock al crear documento</span><label class="toggle"><input type="checkbox" id="cfg-descontar-stock"><span class="toggle-slider"></span></label></div>
+                <div class="toggle-wrap"><span style="font-size:.875rem;color:#e2e8f0;">Permitir stock negativo</span><label class="toggle"><input type="checkbox" id="cfg-stock-negativo"><span class="toggle-slider"></span></label></div>
+              </div>
+              <div class="cfg-section">
+                <p class="cfg-section-title">Moneda</p>
+                <select id="cfg-moneda" class="modal-input"><option value="CLP">Peso Chileno (CLP)</option><option value="USD">Dólar (USD)</option><option value="EUR">Euro (EUR)</option></select>
+              </div>
+            </div>
+            <!-- Ventas -->
+            <div class="cfg-panel" id="cfgpanel-ventas">
+              <div class="cfg-section">
+                <p class="cfg-section-title">Flujo de documentos</p>
+                <div class="toggle-wrap"><span style="font-size:.875rem;color:#e2e8f0;">Requerir aprobación antes de convertir cotización</span><label class="toggle"><input type="checkbox" id="cfg-aprobacion" checked><span class="toggle-slider"></span></label></div>
+                <div class="toggle-wrap"><span style="font-size:.875rem;color:#e2e8f0;">Notificar al cambiar estado</span><label class="toggle"><input type="checkbox" id="cfg-notif-estado"><span class="toggle-slider"></span></label></div>
+                <div class="toggle-wrap"><span style="font-size:.875rem;color:#e2e8f0;">Mostrar métricas de conversión en reportes</span><label class="toggle"><input type="checkbox" id="cfg-metricas" checked><span class="toggle-slider"></span></label></div>
+              </div>
+              <div class="cfg-section">
+                <p class="cfg-section-title">Descuentos</p>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">
+                  <div><label class="modal-label">Descuento máximo (%)</label><input type="number" id="cfg-desc-max" class="modal-input" value="30" min="0" max="100"></div>
+                  <div><label class="modal-label">Descuento por defecto (%)</label><input type="number" id="cfg-desc-default" class="modal-input" value="0" min="0" max="100"></div>
+                </div>
+              </div>
+            </div>
+            <!-- Apariencia -->
+            <div class="cfg-panel" id="cfgpanel-apariencia">
+              <div class="cfg-section">
+                <p class="cfg-section-title">Color principal</p>
+                <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
+                  <button class="color-swatch selected" style="background:#3b82f6;" onclick="cambiarColor('#3b82f6',this)" title="Azul"></button>
+                  <button class="color-swatch" style="background:#8b5cf6;" onclick="cambiarColor('#8b5cf6',this)" title="Púrpura"></button>
+                  <button class="color-swatch" style="background:#10b981;" onclick="cambiarColor('#10b981',this)" title="Verde"></button>
+                  <button class="color-swatch" style="background:#f59e0b;" onclick="cambiarColor('#f59e0b',this)" title="Ámbar"></button>
+                  <button class="color-swatch" style="background:#ef4444;" onclick="cambiarColor('#ef4444',this)" title="Rojo"></button>
+                  <button class="color-swatch" style="background:#ec4899;" onclick="cambiarColor('#ec4899',this)" title="Rosa"></button>
+                  <button class="color-swatch" style="background:#06b6d4;" onclick="cambiarColor('#06b6d4',this)" title="Cyan"></button>
+                </div>
+              </div>
+              <div class="cfg-section">
+                <p class="cfg-section-title">Nombre del sistema</p>
+                <input type="text" id="cfg-app-nombre" class="modal-input" placeholder="CotiFácil" value="CotiFácil">
+                <p style="color:#64748b;font-size:.78rem;margin-top:.4rem;">Aparece en el sidebar y en los documentos</p>
+              </div>
+            </div>
+            <div class="flex justify-end gap-2" style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid #1e2d3d;">
+              <button class="btn-secondary" onclick="hideModal('config-modal')">Cancelar</button>
+              <button class="btn-primary" onclick="guardarConfiguracion()"><i class="fas fa-save"></i> Guardar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
