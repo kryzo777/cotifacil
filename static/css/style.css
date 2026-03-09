@@ -57,7 +57,7 @@ body {
 
 /* ========== HEADER DEL SIDEBAR ========== */
 .sidebar-header {
-    padding: 1.5rem 1.25rem;
+    padding: 1rem 1.25rem;
     border-bottom: 1px solid var(--border-color);
     background: rgba(31, 41, 55, 0.95);
 }
