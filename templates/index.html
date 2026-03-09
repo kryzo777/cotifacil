@@ -1,6 +1,60 @@
 {% extends "base.html" %}
 
 {% block content %}
+<style>
+/* ===== BARRAS DE BÚSQUEDA ===== */
+.search-wrapper {
+    position: relative;
+    margin: 0 0 1.25rem 0 !important;
+}
+.search-wrapper::before {
+    content: "\f002";
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    position: absolute;
+    left: 0.9rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #4b6070;
+    font-size: 0.8rem;
+    pointer-events: none;
+    z-index: 2;
+    transition: color 0.2s;
+}
+.search-wrapper:focus-within::before { color: #3b82f6; }
+.search-wrapper input,
+#client-search,
+#product-search,
+#document-search {
+    display: block !important;
+    width: 100% !important;
+    padding: 0.72rem 1rem 0.72rem 2.5rem !important;
+    margin: 0 !important;
+    background: #0f1923 !important;
+    border: 1px solid #243447 !important;
+    border-radius: 10px !important;
+    color: #e2e8f0 !important;
+    font-size: 0.875rem !important;
+    font-family: inherit !important;
+    outline: none !important;
+    box-shadow: none !important;
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s !important;
+    box-sizing: border-box !important;
+    -webkit-appearance: none !important;
+}
+.search-wrapper input::placeholder,
+#client-search::placeholder,
+#product-search::placeholder,
+#document-search::placeholder { color: #3d5468 !important; }
+.search-wrapper input:focus,
+#client-search:focus,
+#product-search:focus,
+#document-search:focus {
+    border-color: #3b82f6 !important;
+    background: #111e2c !important;
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.13) !important;
+}
+</style>
 <div class="app-container">
     <!-- Sidebar -->
     <aside class="sidebar">
@@ -107,10 +161,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="card">
-                    <h2 class="text-lg font-semibold mb-4">Documentos Recientes</h2>
-                    <div id="recent-docs"><p class="text-gray-400 text-sm">Cargando...</p></div>
-                </div>
+                <!-- Aquí puedes agregar más contenido del dashboard, como gráficos -->
             </div>
 
             <!-- Página de Clientes -->
@@ -328,27 +379,11 @@
                 </div>
             </div>
 
-            <!-- Página de Documentos -->
+            <!-- Página de Documentos (placeholder) -->
             <div id="documentos-page" class="page-content hidden">
                 <div class="card">
-                    <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-xl font-semibold">Lista de Documentos</h2>
-                    </div>
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Número</th>
-                                    <th>Fecha</th>
-                                    <th>Cliente</th>
-                                    <th>Total</th>
-                                    <th>Estado</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="documents-table-body"></tbody>
-                        </table>
-                    </div>
+                    <h2 class="text-xl font-semibold mb-6">Lista de Documentos</h2>
+                    <p class="text-gray-400">Funcionalidad de documentos en desarrollo.</p>
                 </div>
             </div>
 
@@ -360,10 +395,11 @@
                 </div>
             </div>
 
-            <!-- Página de Reportes -->
+            <!-- Página de Reportes (placeholder) -->
             <div id="reportes-page" class="page-content hidden">
-                <div id="reportes-content">
-                    <p class="text-gray-400">Cargando reportes...</p>
+                <div class="card">
+                    <h2 class="text-xl font-semibold mb-6">Reportes</h2>
+                    <p class="text-gray-400">Funcionalidad de reportes en desarrollo.</p>
                 </div>
             </div>
         </div>
