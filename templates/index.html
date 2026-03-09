@@ -161,68 +161,50 @@
                                 </button>
                             </div>
                             <div class="modal-body">
-        <form id="cliente-form" class="space-y-4">
-            <input type="hidden" id="cliente-id" value="">
-            <div>
-                <label for="rut" class="modal-label">RUT</label>
-                <input type="text" id="rut" class="modal-input" placeholder="12.345.678-9" required>
+                                <form id="cliente-form" class="space-y-4">
+                                    <input type="hidden" id="cliente-id">
+                                    <div>
+                                        <label for="rut" class="block text-sm font-medium mb-1">RUT</label>
+                                        <input type="text" id="rut" class="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" required>
+                                    </div>
+                                    <div>
+                                        <label for="razon-social" class="block text-sm font-medium mb-1">Razón Social</label>
+                                        <input type="text" id="razon-social" class="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" required>
+                                    </div>
+                                    <div>
+                                        <label for="direccion" class="block text-sm font-medium mb-1">Dirección</label>
+                                        <input type="text" id="direccion" class="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white">
+                                    </div>
+                                    <div>
+                                        <label for="region" class="block text-sm font-medium mb-1">Región</label>
+                                        <input type="text" id="region" class="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white">
+                                    </div>
+                                    <div>
+                                        <label for="ciudad" class="block text-sm font-medium mb-1">Ciudad</label>
+                                        <input type="text" id="ciudad" class="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white">
+                                    </div>
+                                    <div>
+                                        <label for="telefono" class="block text-sm font-medium mb-1">Teléfono</label>
+                                        <input type="text" id="telefono" class="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white">
+                                    </div>
+                                    <div>
+                                        <label for="email" class="block text-sm font-medium mb-1">Email</label>
+                                        <input type="email" id="email" class="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white">
+                                    </div>
+                                    <div>
+                                        <label for="nota" class="block text-sm font-medium mb-1">Notas</label>
+                                        <textarea id="nota" class="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white"></textarea>
+                                    </div>
+                                    <div class="flex justify-end gap-2">
+                                        <button type="button" class="btn-secondary" onclick="hideModal('cliente-modal')">Cancelar</button>
+                                        <button type="submit" class="btn-primary">Guardar</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div>
-                <label for="razon-social" class="modal-label">Razón Social</label>
-                <input type="text" id="razon-social" class="modal-input" placeholder="Empresa S.A." required>
-            </div>
-            <div>
-                <label for="direccion" class="modal-label">Dirección</label>
-                <input type="text" id="direccion" class="modal-input" placeholder="Av. Ejemplo 123">
-            </div>
-            <div>
-                <label for="region" class="modal-label">Región</label>
-                <select id="region" class="modal-input">
-                    <option value="">— Seleccionar región —</option>
-                    <option value="Arica y Parinacota">Arica y Parinacota</option>
-                    <option value="Tarapacá">Tarapacá</option>
-                    <option value="Antofagasta">Antofagasta</option>
-                    <option value="Atacama">Atacama</option>
-                    <option value="Coquimbo">Coquimbo</option>
-                    <option value="Valparaíso">Valparaíso</option>
-                    <option value="Metropolitana de Santiago">Metropolitana de Santiago</option>
-                    <option value="O'Higgins">O'Higgins</option>
-                    <option value="Maule">Maule</option>
-                    <option value="Ñuble">Ñuble</option>
-                    <option value="Biobío">Biobío</option>
-                    <option value="La Araucanía">La Araucanía</option>
-                    <option value="Los Ríos">Los Ríos</option>
-                    <option value="Los Lagos">Los Lagos</option>
-                    <option value="Aysén">Aysén</option>
-                    <option value="Magallanes">Magallanes</option>
-                </select>
-            </div>
-            <div>
-                <label for="ciudad" class="modal-label">Ciudad</label>
-                <input type="text" id="ciudad" class="modal-input" placeholder="Santiago">
-            </div>
-            <div>
-                <label for="telefono" class="modal-label">Teléfono</label>
-                <input type="text" id="telefono" class="modal-input" placeholder="+56 9 1234 5678">
-            </div>
-            <div>
-                <label for="email" class="modal-label">Email</label>
-                <input type="email" id="email" class="modal-input" placeholder="contacto@empresa.cl">
-            </div>
-            <div>
-                <label for="nota" class="modal-label">Notas</label>
-                <textarea id="nota" class="modal-input" rows="3" placeholder="Observaciones..."></textarea>
-            </div>
-            <div class="flex justify-end gap-2">
-                <button type="button" class="btn-secondary" onclick="hideModal('cliente-modal')">Cancelar</button>
-                <button type="submit" class="btn-primary">Guardar</button>
-            </div>
-        </form>
-                            </div><!-- /modal-body -->
-                        </div><!-- /modal-inner -->
-                    </div><!-- /modal-content -->
-                </div><!-- /modal -->
-            </div><!-- /clientes-page -->
 
             <!-- Página de Productos -->
             <div id="productos-page" class="page-content hidden">
