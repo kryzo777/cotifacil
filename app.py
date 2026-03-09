@@ -9,7 +9,6 @@ from functools import wraps
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'cotifacil_secret_key_2024')
-app.config['SESSION_COOKIE_SECURE'] = True
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
@@ -79,6 +78,9 @@ def index():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    # Si ya tiene sesión, ir directo al dashboard
+    if request.method == 'GET' and 'user_id' in session:
+        return redirect(url_for('index'))
     if request.method == 'POST':
         try:
             data = request.get_json()
