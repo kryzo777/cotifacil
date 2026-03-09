@@ -1,0 +1,14 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "email": "admin@cotifacil.com",
+      "password": "admin123",
+      "name": "Administrador",
+      "role": "admin"
+    }
+  ],
+  "clients": [],
+  "products": [],
+  "documents": []
+}

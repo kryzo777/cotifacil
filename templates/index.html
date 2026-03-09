@@ -1,0 +1,372 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-brand">
+                <div class="sidebar-logo">
+                    <i class="fas fa-file-invoice"></i>
+                </div>
+                <h1 class="sidebar-title">CotiFácil</h1>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="#dashboard" class="nav-link active" data-page="dashboard">
+                <i class="fas fa-home nav-icon"></i>
+                <span class="nav-text">Dashboard</span>
+            </a>
+            <a href="#clientes" class="nav-link" data-page="clientes">
+                <i class="fas fa-users nav-icon"></i>
+                <span class="nav-text">Clientes</span>
+            </a>
+            <a href="#productos" class="nav-link" data-page="productos">
+                <i class="fas fa-boxes nav-icon"></i>
+                <span class="nav-text">Productos</span>
+            </a>
+            <a href="#documentos" class="nav-link" data-page="documentos">
+                <i class="fas fa-file-alt nav-icon"></i>
+                <span class="nav-text">Documentos</span>
+            </a>
+            <a href="#crear-documento" class="nav-link" data-page="crear-documento">
+                <i class="fas fa-file-invoice-dollar nav-icon"></i>
+                <span class="nav-text">Crear Documento</span>
+            </a>
+            <a href="#reportes" class="nav-link" data-page="reportes">
+                <i class="fas fa-chart-bar nav-icon"></i>
+                <span class="nav-text">Reportes</span>
+            </a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="user-profile">
+                <div class="user-avatar">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div class="user-info" id="user-info">
+                    <p class="user-name">Cargando...</p>
+                    <p class="user-email">Cargando...</p>
+                </div>
+                <button class="logout-btn" id="logout-btn" title="Cerrar sesión">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Contenido principal -->
+    <main class="main-content">
+        <header class="main-header">
+            <div class="header-content">
+                <h1 class="page-title">Dashboard</h1>
+                <div class="header-actions">
+                    <button class="header-btn mobile-menu-btn hidden" title="Menú">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+        <div class="content-container">
+            <!-- Dashboard -->
+            <div id="dashboard-page" class="page-content active">
+                <div class="stats-grid">
+                    <div class="card stat-card">
+                        <div class="stat-icon bg-blue">
+                            <i class="fas fa-file-alt"></i>
+                        </div>
+                        <div class="stat-info">
+                            <p class="stat-label">Total Documentos</p>
+                            <p class="stat-value" data-stat="documents">0</p>
+                        </div>
+                    </div>
+                    <div class="card stat-card">
+                        <div class="stat-icon bg-green">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-info">
+                            <p class="stat-label">Total Clientes</p>
+                            <p class="stat-value" data-stat="clients">0</p>
+                        </div>
+                    </div>
+                    <div class="card stat-card">
+                        <div class="stat-icon bg-purple">
+                            <i class="fas fa-boxes"></i>
+                        </div>
+                        <div class="stat-info">
+                            <p class="stat-label">Total Productos</p>
+                            <p class="stat-value" data-stat="products">0</p>
+                        </div>
+                    </div>
+                    <div class="card stat-card">
+                        <div class="stat-icon bg-yellow">
+                            <i class="fas fa-dollar-sign"></i>
+                        </div>
+                        <div class="stat-info">
+                            <p class="stat-label">Ventas Totales</p>
+                            <p class="stat-value" data-stat="sales">$0</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <h2 class="text-lg font-semibold mb-4">Documentos Recientes</h2>
+                    <div id="recent-docs"><p class="text-gray-400 text-sm">Cargando...</p></div>
+                </div>
+            </div>
+
+            <!-- Página de Clientes -->
+            <div id="clientes-page" class="page-content hidden">
+                <div class="card">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-semibold">Lista de Clientes</h2>
+                        <div class="flex gap-4">
+                            <button class="btn-primary" onclick="crearCliente()">
+                                <i class="fas fa-plus"></i> Nuevo Cliente
+                            </button>
+                            <button class="btn-secondary" onclick="exportarClientes()">
+                                <i class="fas fa-download"></i> Exportar
+                            </button>
+                        </div>
+                    </div>
+                    <div class="search-wrapper">
+                        <input type="text" id="client-search" placeholder="Buscar clientes...">
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>RUT</th>
+                                    <th>Razón Social</th>
+                                    <th>Dirección</th>
+                                    <th>Región</th>
+                                    <th>Ciudad</th>
+                                    <th>Contactos</th>
+                                    <th>Documentos</th>
+                                    <th>Total</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="clients-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <!-- Modal para clientes -->
+                <div id="cliente-modal" class="modal">
+                    <div class="modal-backdrop" onclick="hideModal('cliente-modal')"></div>
+                    <div class="modal-content">
+                        <div class="modal-inner">
+                            <div class="modal-header">
+                                <h2 class="modal-title" id="cliente-modal-title">Nuevo Cliente</h2>
+                                <button class="modal-close" onclick="hideModal('cliente-modal')">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="cliente-form" class="space-y-4">
+                                    <input type="hidden" id="cliente-id">
+                                    <div>
+                                        <label for="rut" class="block text-sm font-medium mb-1">RUT</label>
+                                        <input type="text" id="rut" class="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" required>
+                                    </div>
+                                    <div>
+                                        <label for="razon-social" class="block text-sm font-medium mb-1">Razón Social</label>
+                                        <input type="text" id="razon-social" class="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" required>
+                                    </div>
+                                    <div>
+                                        <label for="direccion" class="block text-sm font-medium mb-1">Dirección</label>
+                                        <input type="text" id="direccion" class="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white">
+                                    </div>
+                                    <div>
+                                        <label for="region" class="block text-sm font-medium mb-1">Región</label>
+                                        <input type="text" id="region" class="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white">
+                                    </div>
+                                    <div>
+                                        <label for="ciudad" class="block text-sm font-medium mb-1">Ciudad</label>
+                                        <input type="text" id="ciudad" class="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white">
+                                    </div>
+                                    <div>
+                                        <label for="telefono" class="block text-sm font-medium mb-1">Teléfono</label>
+                                        <input type="text" id="telefono" class="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white">
+                                    </div>
+                                    <div>
+                                        <label for="email" class="block text-sm font-medium mb-1">Email</label>
+                                        <input type="email" id="email" class="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white">
+                                    </div>
+                                    <div>
+                                        <label for="nota" class="block text-sm font-medium mb-1">Notas</label>
+                                        <textarea id="nota" class="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white"></textarea>
+                                    </div>
+                                    <div class="flex justify-end gap-2">
+                                        <button type="button" class="btn-secondary" onclick="hideModal('cliente-modal')">Cancelar</button>
+                                        <button type="submit" class="btn-primary">Guardar</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Página de Productos -->
+            <div id="productos-page" class="page-content hidden">
+                <div class="card">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-semibold">Lista de Productos</h2>
+                        <button class="btn-primary" onclick="crearProducto()">
+                            <i class="fas fa-plus"></i> Nuevo Producto
+                        </button>
+                    </div>
+                    <div class="search-wrapper">
+                        <input type="text" id="product-search" placeholder="Buscar productos...">
+                    </div>
+                    <div class="stats-grid mb-6">
+                        <div class="card stat-card">
+                            <div class="stat-icon bg-blue">
+                                <i class="fas fa-boxes"></i>
+                            </div>
+                            <div class="stat-info">
+                                <p class="stat-label">Total Productos</p>
+                                <p class="stat-value" id="total-products">0</p>
+                            </div>
+                        </div>
+                        <div class="card stat-card">
+                            <div class="stat-icon bg-purple">
+                                <i class="fas fa-tags"></i>
+                            </div>
+                            <div class="stat-info">
+                                <p class="stat-label">Categorías</p>
+                                <p class="stat-value" id="total-categories">0</p>
+                            </div>
+                        </div>
+                        <div class="card stat-card">
+                            <div class="stat-icon bg-green">
+                                <i class="fas fa-dollar-sign"></i>
+                            </div>
+                            <div class="stat-info">
+                                <p class="stat-label">Valor Total</p>
+                                <p class="stat-value" id="total-value">$0</p>
+                            </div>
+                        </div>
+                        <div class="card stat-card">
+                            <div class="stat-icon bg-red">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                            <div class="stat-info">
+                                <p class="stat-label">Stock Bajo</p>
+                                <p class="stat-value" id="low-stock-count">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table id="products-table">
+                            <thead>
+                                <tr>
+                                    <th>SKU</th>
+                                    <th>Nombre</th>
+                                    <th>Categoría</th>
+                                    <th>Proveedor</th>
+                                    <th>Precio</th>
+                                    <th>Stock</th>
+                                    <th>Stock Mínimo</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="products-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <!-- Modal para productos -->
+                <div id="producto-modal" class="modal">
+                    <div class="modal-backdrop" onclick="hideModal('producto-modal')"></div>
+                    <div class="modal-content">
+                        <div class="modal-inner">
+                            <div class="modal-header">
+                                <h2 class="modal-title" id="producto-modal-title">Nuevo Producto</h2>
+                                <button class="modal-close" onclick="hideModal('producto-modal')">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="producto-form" class="space-y-4">
+                                    <input type="hidden" id="producto-id">
+                                    <div>
+                                        <label for="sku" class="block text-sm font-medium mb-1">SKU</label>
+                                        <input type="text" id="sku" class="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" required>
+                                    </div>
+                                    <div>
+                                        <label for="nombre" class="block text-sm font-medium mb-1">Nombre</label>
+                                        <input type="text" id="nombre" class="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" required>
+                                    </div>
+                                    <div>
+                                        <label for="precio" class="block text-sm font-medium mb-1">Precio</label>
+                                        <input type="number" id="precio" class="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" required>
+                                    </div>
+                                    <div>
+                                        <label for="stock" class="block text-sm font-medium mb-1">Stock</label>
+                                        <input type="number" id="stock" class="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" required>
+                                    </div>
+                                    <div>
+                                        <label for="stock_minimo" class="block text-sm font-medium mb-1">Stock Mínimo</label>
+                                        <input type="number" id="stock_minimo" class="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white" required>
+                                    </div>
+                                    <div>
+                                        <label for="categoria" class="block text-sm font-medium mb-1">Categoría</label>
+                                        <input type="text" id="categoria" class="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white">
+                                    </div>
+                                    <div>
+                                        <label for="proveedor" class="block text-sm font-medium mb-1">Proveedor</label>
+                                        <input type="text" id="proveedor" class="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white">
+                                    </div>
+                                    <div class="flex justify-end gap-2">
+                                        <button type="button" class="btn-secondary" onclick="hideModal('producto-modal')">Cancelar</button>
+                                        <button type="submit" class="btn-primary">Guardar</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Página de Documentos -->
+            <div id="documentos-page" class="page-content hidden">
+                <div class="card">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-semibold">Lista de Documentos</h2>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Número</th>
+                                    <th>Fecha</th>
+                                    <th>Cliente</th>
+                                    <th>Total</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="documents-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Página de Crear Documento (placeholder) -->
+            <div id="crear-documento-page" class="page-content hidden">
+                <div class="card">
+                    <h2 class="text-xl font-semibold mb-6">Crear Documento</h2>
+                    <p class="text-gray-400">Funcionalidad de crear documento en desarrollo.</p>
+                </div>
+            </div>
+
+            <!-- Página de Reportes -->
+            <div id="reportes-page" class="page-content hidden">
+                <div id="reportes-content">
+                    <p class="text-gray-400">Cargando reportes...</p>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+{% endblock %}
