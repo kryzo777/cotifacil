@@ -8,8 +8,10 @@ from datetime import datetime
 from functools import wraps
 
 app = Flask(__name__)
-app.secret_key = 'cotifacil_secret_key_2024'
-app.config['SESSION_TYPE'] = 'filesystem'
+app.secret_key = os.environ.get('SECRET_KEY', 'cotifacil_secret_key_2024')
+app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 # Archivo de base de datos simple
 DB_FILE = 'data/database.json'
