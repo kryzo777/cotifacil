@@ -1192,3 +1192,50 @@ function showError(tbodyId, msg, cols=6) {
 }
 
 } // ── fin bloque if pathname !== /login ──────────────────────────
+
+// ── Exponer funciones al scope global (necesario para onclick inline) ──
+window.crearCliente            = crearCliente;
+window.editarCliente           = editarCliente;
+window.eliminarCliente         = eliminarCliente;
+window.exportarClientes        = exportarClientes;
+window.importarClientes        = importarClientes;
+window.handleClientesCSV       = handleClientesCSV;
+window.confirmarImportarClientes = confirmarImportarClientes;
+
+window.crearProducto           = crearProducto;
+window.editarProducto          = editarProducto;
+window.eliminarProducto        = eliminarProducto;
+window.importarProductos       = importarProductos;
+window.handleProductosCSV      = handleProductosCSV;
+window.confirmarImportarProductos = confirmarImportarProductos;
+
+window.guardarDocumento        = guardarDocumento;
+window.limpiarFormDoc          = limpiarFormDoc;
+window.verDocumento            = verDocumento;
+window.editarDocumento         = editarDocumento;
+window.confirmarEditarDoc      = confirmarEditarDoc;
+window.eliminarDocumento       = eliminarDocumento;
+window.descargarPDF            = descargarPDF;
+window.descargarPDFActual      = descargarPDFActual;
+window.filtrarDocumentos       = filtrarDocumentos;
+
+window.seleccionarTipoDoc      = seleccionarTipoDoc;
+window.onClienteChange         = onClienteChange;
+window.agregarLineaDoc         = agregarLineaDoc;
+window.eliminarLinea           = eliminarLinea;
+window.calcularTotales         = calcularTotales;
+window.abrirSelectorProducto   = abrirSelectorProducto;
+window.filtrarSelectorProductos = filtrarSelectorProductos;
+window.agregarProductoDelSistema = agregarProductoDelSistema;
+
+window.showModal               = showModal;
+window.hideModal               = hideModal;
+window.toggleDropdown          = toggleDropdown;
+window.abrirPerfil             = abrirPerfil;
+window.abrirConfiguracion      = abrirConfiguracion;
+window.guardarConfiguracion    = guardarConfiguracion;
+window.mostrarCfgPanel         = mostrarCfgPanel;
+window.handleLogoUpload        = handleLogoUpload;
+window.cambiarColor            = cambiarColor;
+window.cambiarColorDocCustom   = cambiarColorDocCustom;
+window.doLogout                = doLogout;
