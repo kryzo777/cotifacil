@@ -62,9 +62,111 @@ def send_email_smtp(to_email, subject, html_body):
 
 def generar_html_documento(doc):
     tipo_labels = {'cotizacion':'COTIZACIÓN','orden_compra':'ORDEN DE COMPRA','factura':'FACTURA'}
-    lineas = doc.get('items', []); subtotal = doc.get('subtotal',0); iva = doc.get('iva',0); total = doc.get('total',0); cliente = doc.get('cliente',{})
-    rows = ''.join(f'<tr><td style="padding:.5rem;border-bottom:1px solid #eee;">{l.get("descripcion","")}</td><td style="padding:.5rem;border-bottom:1px solid #eee;text-align:center;">{l.get("cantidad",1)}</td><td style="padding:.5rem;border-bottom:1px solid #eee;text-align:right;">${l.get("precio_unit",0):,.0f}</td><td style="padding:.5rem;border-bottom:1px solid #eee;text-align:right;">${l.get("subtotal",0):,.0f}</td></tr>' for l in lineas)
-    return f'<div style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto;padding:2rem;"><div style="display:flex;justify-content:space-between;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:2px solid #1d4ed8;"><div><h2 style="color:#1d4ed8;margin:0;">{tipo_labels.get(doc.get("tipo",""),"DOCUMENTO")}</h2><p style="margin:.25rem 0;">N° {doc.get("number","—")}</p></div><div style="text-align:right;font-size:.85rem;">Fecha: {(doc.get("date") or "—")[:10]}</div></div><div style="background:#f9fafb;padding:.75rem;border-radius:6px;margin-bottom:1rem;"><strong>Cliente:</strong> {cliente.get("razon_social","—")}{(" · RUT: "+cliente.get("rut","")) if cliente.get("rut") else ""}</div><table style="width:100%;border-collapse:collapse;"><thead><tr style="background:#f3f4f6;"><th style="padding:.5rem;text-align:left;">Descripción</th><th style="padding:.5rem;text-align:center;">Cant.</th><th style="padding:.5rem;text-align:right;">P.Unit.</th><th style="padding:.5rem;text-align:right;">Total</th></tr></thead><tbody>{rows}</tbody></table><div style="text-align:right;margin-top:1rem;"><p>Subtotal: <strong>${subtotal:,.0f}</strong></p><p>IVA 19%: <strong>${iva:,.0f}</strong></p><p style="font-size:1.1rem;font-weight:700;color:#1d4ed8;">Total: ${total:,.0f}</p></div></div>'
+    lineas  = doc.get('items', [])
+    subtotal= doc.get('subtotal', 0)
+    iva     = doc.get('iva', 0)
+    total   = doc.get('total', 0)
+    cliente = doc.get('cliente', {}) or {}
+    fecha   = (doc.get('date') or '')[:10] or '—'
+    validez = doc.get('validez', 30)
+    tipo_label = tipo_labels.get(doc.get('tipo',''), 'DOCUMENTO')
+    numero  = doc.get('number', '—')
+    notas   = doc.get('notas', '')
+    condicion = doc.get('condicion_venta', '')
+
+    rows = ''.join(
+        f'<tr style="border-bottom:1px solid #e5e7eb;">'
+        f'<td style="padding:.5rem .4rem;">{l.get("descripcion","")}</td>'
+        f'<td style="padding:.5rem .4rem;text-align:center;">{l.get("cantidad",1)}</td>'
+        f'<td style="padding:.5rem .4rem;text-align:right;">${l.get("precio_unit",0):,.0f}</td>'
+        f'<td style="padding:.5rem .4rem;text-align:right;font-weight:500;">${l.get("subtotal",0):,.0f}</td>'
+        f'</tr>'
+        for l in lineas
+    )
+
+    return f'''<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+  *{{box-sizing:border-box;margin:0;padding:0;}}
+  body{{font-family:Arial,Helvetica,sans-serif;padding:2.5rem;color:#111;font-size:.85rem;}}
+  table{{width:100%;border-collapse:collapse;}}
+</style>
+</head><body>
+<div style="max-width:720px;margin:0 auto;">
+
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;">
+    <div>
+      <div style="display:inline-block;border:3px solid #111;padding:.3rem .8rem;font-size:1.4rem;font-weight:900;">
+        {doc.get("empresa_nombre","Mi Empresa")}
+      </div>
+      <div style="margin-top:.5rem;font-size:.78rem;color:#333;line-height:1.6;">
+        {"Giro: "+doc.get("empresa_giro","")+"<br>" if doc.get("empresa_giro") else ""}
+        {"Dirección: "+doc.get("empresa_direccion","")+"<br>" if doc.get("empresa_direccion") else ""}
+        {"Tel: "+doc.get("empresa_telefono","")+"<br>" if doc.get("empresa_telefono") else ""}
+        Fecha: {fecha}
+      </div>
+    </div>
+    <div style="border:2px solid #111;padding:.6rem 1.2rem;text-align:center;min-width:180px;">
+      <div style="font-size:1.3rem;font-weight:900;letter-spacing:1px;">{tipo_label}</div>
+      <div style="font-size:1rem;font-weight:700;margin-top:.2rem;">{numero}</div>
+      {"<div style='font-size:.78rem;margin-top:.2rem;'>RUT: "+doc.get("empresa_rut","")+"</div>" if doc.get("empresa_rut") else ""}
+    </div>
+  </div>
+
+  <hr style="border:none;border-top:1px solid #ccc;margin-bottom:1rem;">
+
+  <div style="display:flex;justify-content:space-between;margin-bottom:1.2rem;">
+    <div>
+      <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;color:#555;margin-bottom:.3rem;">CLIENTE</div>
+      <div style="font-weight:700;font-size:.92rem;">
+        {cliente.get("razon_social","—")}{(" · RUT: "+cliente.get("rut","")) if cliente.get("rut") else ""}
+      </div>
+      {"<div style='color:#333;margin-top:.15rem;'>"+cliente.get("direccion","")+"</div>" if cliente.get("direccion") else ""}
+      {"<div style='color:#333;'>"+cliente.get("email","")+"</div>" if cliente.get("email") else ""}
+    </div>
+    <div style="text-align:right;font-size:.82rem;color:#333;line-height:1.8;">
+      {"Condición de venta: "+condicion+"<br>" if condicion else ""}
+      Vigencia: {validez} días
+    </div>
+  </div>
+
+  <hr style="border:none;border-top:1px solid #ccc;margin-bottom:.8rem;">
+
+  <table>
+    <thead>
+      <tr style="border-bottom:2px solid #111;">
+        <th style="text-align:left;padding:.5rem .4rem;font-size:.82rem;">Descripción</th>
+        <th style="text-align:center;padding:.5rem .4rem;font-size:.82rem;width:10%;">Cant.</th>
+        <th style="text-align:right;padding:.5rem .4rem;font-size:.82rem;width:18%;">P. Unit.</th>
+        <th style="text-align:right;padding:.5rem .4rem;font-size:.82rem;width:18%;">Total</th>
+      </tr>
+    </thead>
+    <tbody>{rows}</tbody>
+  </table>
+
+  <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:1.5rem;">
+    <div style="font-size:.82rem;color:#374151;">
+      {"<strong>Notas:</strong> "+notas if notas else ""}
+    </div>
+    <div style="min-width:220px;">
+      <hr style="border:none;border-top:1px solid #ccc;margin-bottom:.5rem;">
+      <div style="display:flex;justify-content:space-between;padding:.2rem 0;font-size:.82rem;">
+        <span>Subtotal</span><span>${subtotal:,.0f}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:.2rem 0;font-size:.82rem;">
+        <span>IVA (19%)</span><span>${iva:,.0f}</span>
+      </div>
+      <hr style="border:none;border-top:2px solid #111;margin:.4rem 0;">
+      <div style="display:flex;justify-content:space-between;font-weight:700;font-size:1rem;">
+        <span>Total</span><span>${total:,.0f}</span>
+      </div>
+    </div>
+  </div>
+
+  <hr style="border:none;border-top:1px solid #ccc;margin-top:2rem;margin-bottom:.5rem;">
+  <div style="text-align:center;font-size:.75rem;color:#9ca3af;">Gracias por su preferencia.</div>
+</div>
+</body></html>'''
 
 @app.route('/')
 def index():
@@ -247,8 +349,8 @@ def api_documents():
         if enviar_email:
             cliente_email = (cliente or {}).get('email','')
             if cliente_email:
-                html_doc = generar_html_documento(payload)
                 subject = f"{payload['number']} - {(cliente or {}).get('razon_social','')}"
+                html_doc = generar_html_documento(payload)
                 email_sent = send_email_smtp(cliente_email, subject, html_doc)
         return jsonify({"success":True,"document":payload,"email_sent":email_sent})
     except Exception as e: return jsonify({"success":False,"error":str(e)}), 500
@@ -283,7 +385,5 @@ def api_stats():
         return jsonify({"total_documents":len(db['documents']),"total_clients":len(db['clients']),"total_products":len(db['products']),"total_sales":total_sales,"recent_documents":recent_docs,"client_stats":client_stats,"doc_type_stats":doc_type_stats})
     except Exception as e: return jsonify({"success":False,"error":str(e)}), 500
 
-init_db()
-
 if __name__ == '__main__':
-    app.run(debug=True)
+    init_db(); app.run(debug=True)
