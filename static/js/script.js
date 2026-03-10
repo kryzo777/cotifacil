@@ -522,16 +522,24 @@ function descargarPDF(id) {
     <meta charset="utf-8">
     <title>${escHtml(doc.number||'Documento')}</title>
     <style>
-      *{box-sizing:border-box;}
-      body{font-family:Arial,Helvetica,sans-serif;margin:0;padding:2rem;color:#111;}
-      table{width:100%;border-collapse:collapse;}
-      th{background:#f3f4f6;padding:.5rem .7rem;text-align:left;font-size:.8rem;border-bottom:1px solid #d1d5db;}
-      td{padding:.45rem .7rem;border-bottom:1px solid #e5e7eb;font-size:.82rem;}
-      @media print{body{padding:1rem;} button{display:none!important;}}
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: Arial, Helvetica, sans-serif; font-size: 10pt; color: #111; background: white; }
+      .pagina { width: 210mm; min-height: 297mm; padding: 15mm; margin: 0 auto; }
+      table { width: 100%; border-collapse: collapse; }
+      @page { size: A4; margin: 0; }
+      @media print {
+        html, body { width: 210mm; height: 297mm; }
+        .pagina { padding: 12mm 14mm; margin: 0; }
+        button { display: none !important; }
+      }
+      @media screen {
+        body { background: #e5e7eb; padding: 20px; }
+        .pagina { box-shadow: 0 4px 24px rgba(0,0,0,.15); background: white; }
+      }
     </style>
   </head><body>
-    ${htmlContent}
-    <script>setTimeout(()=>{window.print();},400);<\/script>
+    <div class="pagina">${htmlContent}</div>
+    <script>setTimeout(()=>{window.print();},500);<\/script>
   </body></html>`);
   ventana.document.close();
 }
@@ -724,77 +732,107 @@ function getDocColor() {
 function generarHTMLDoc(doc) {
   const cfg        = App.config || {};
   const tipoLabels = { cotizacion:'COTIZACIÓN', orden_compra:'ORDEN DE COMPRA', factura:'FACTURA' };
-  const color      = getDocColor();
   const empresa    = {
     nombre:    cfg.empresaNombre    || 'Mi Empresa',
     rut:       cfg.empresaRut       || '',
+    giro:      cfg.empresaGiro      || '',
     direccion: cfg.empresaDireccion || '',
     telefono:  cfg.empresaTelefono  || '',
-    email:     cfg.empresaEmail     || ''
   };
   const lineas   = doc.lineas || doc.items || [];
   const subtotal = doc.subtotal ?? lineas.reduce((s,l)=>s+(l.subtotal||0),0);
-  const iva      = doc.iva     ?? subtotal * 0.19;
-  const total    = doc.total   ?? subtotal + iva;
+  const iva      = doc.iva     ?? subtotal*0.19;
+  const total    = doc.total   ?? subtotal+iva;
   const pie      = cfg.piePagina || 'Gracias por su preferencia.';
-  const logoHTML = cfg.logo
-    ? `<img src="${cfg.logo}" style="max-height:60px;max-width:160px;object-fit:contain;">`
-    : `<div style="font-size:1.4rem;font-weight:700;color:${color};">${empresa.nombre}</div>`;
-  const mostrarEmpresa = cfg.mostrarEmpresa !== false;
+  const fechaDoc = (doc.date||'').slice(0,10) || (doc.fecha||'').slice(0,10) || '—';
+  const validez  = doc.validez || 30;
+  const tipoLabel= tipoLabels[doc.tipo] || 'DOCUMENTO';
 
-  return `<div style="max-width:700px;margin:0 auto;">
-    <div class="doc-preview-header">
-      <div>
-        ${cfg.mostrarLogo !== false ? logoHTML : `<div style="font-size:1.4rem;font-weight:700;color:${color};">${empresa.nombre}</div>`}
-        ${mostrarEmpresa ? `<div style="font-size:.75rem;color:#6b7280;margin-top:.35rem;">
-          ${empresa.rut       ? `RUT: ${empresa.rut}<br>` : ''}
-          ${empresa.direccion ? `${empresa.direccion}<br>` : ''}
-          ${empresa.telefono  ? `Tel: ${empresa.telefono}` : ''}
-        </div>` : ''}
+  const logoHTML = cfg.logo
+    ? `<img src="${cfg.logo}" style="max-height:55px;max-width:160px;object-fit:contain;">`
+    : `<div style="display:inline-block;border:3px solid #111;padding:4px 12px;font-size:18pt;font-weight:900;letter-spacing:1px;color:#111;">${empresa.nombre}</div>`;
+
+  const empresaInfo = [
+    empresa.giro      ? `Giro: ${empresa.giro}`           : '',
+    empresa.direccion ? `Dirección: ${empresa.direccion}` : '',
+    empresa.telefono  ? `Tel: ${empresa.telefono}`        : '',
+    `Fecha: ${fechaDoc}`,
+  ].filter(Boolean).join('<br>');
+
+  const filasHTML = lineas.length
+    ? lineas.map(l => `
+      <tr>
+        <td style="padding:6px 4px;border-bottom:1px solid #e5e7eb;font-size:9.5pt;">${l.descripcion||'—'}</td>
+        <td style="padding:6px 4px;border-bottom:1px solid #e5e7eb;text-align:center;font-size:9.5pt;">${l.cantidad||1}</td>
+        <td style="padding:6px 4px;border-bottom:1px solid #e5e7eb;text-align:right;font-size:9.5pt;">${formatCLP(l.precio_unit||0)}</td>
+        <td style="padding:6px 4px;border-bottom:1px solid #e5e7eb;text-align:right;font-size:9.5pt;font-weight:500;">${formatCLP(l.subtotal||0)}</td>
+      </tr>`).join('')
+    : `<tr><td colspan="4" style="padding:16px;text-align:center;color:#9ca3af;font-size:9pt;">Sin items</td></tr>`;
+
+  return `
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+    <div>
+      ${logoHTML}
+      <div style="margin-top:6px;font-size:8.5pt;color:#444;line-height:1.7;">${empresaInfo}</div>
+    </div>
+    <div style="border:2px solid #111;padding:8px 18px;text-align:center;min-width:165px;">
+      <div style="font-size:16pt;font-weight:900;letter-spacing:1px;">${tipoLabel}</div>
+      <div style="font-size:10pt;font-weight:700;margin-top:2px;">${doc.number||'—'}</div>
+      ${empresa.rut ? `<div style="font-size:8pt;margin-top:2px;">RUT: ${empresa.rut}</div>` : ''}
+    </div>
+  </div>
+
+  <hr style="border:none;border-top:1px solid #ccc;margin-bottom:10px;">
+
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+    <div style="flex:1;">
+      ${doc.cliente ? `
+        <div style="font-size:7pt;font-weight:700;text-transform:uppercase;color:#555;margin-bottom:3px;letter-spacing:.5px;">CLIENTE</div>
+        <div style="font-weight:700;font-size:10pt;">${doc.cliente.razon_social||'—'}${doc.cliente.rut ? ` · RUT: ${doc.cliente.rut}` : ''}</div>
+        ${doc.cliente.direccion ? `<div style="font-size:9pt;color:#444;margin-top:2px;">${doc.cliente.direccion}</div>` : ''}
+        ${doc.cliente.email     ? `<div style="font-size:9pt;color:#444;">${doc.cliente.email}</div>` : ''}
+      ` : ''}
+    </div>
+    <div style="text-align:right;font-size:9pt;color:#444;line-height:1.8;">
+      ${doc.condicion_venta ? `Condición de venta: ${doc.condicion_venta}<br>` : ''}
+      Vigencia: ${validez} días
+    </div>
+  </div>
+
+  <hr style="border:none;border-top:1px solid #ccc;margin-bottom:8px;">
+
+  <table>
+    <thead>
+      <tr style="border-bottom:2px solid #111;">
+        <th style="text-align:left;padding:6px 4px;font-size:9.5pt;font-weight:700;width:50%;">Descripción</th>
+        <th style="text-align:center;padding:6px 4px;font-size:9.5pt;font-weight:700;width:10%;">Cant.</th>
+        <th style="text-align:right;padding:6px 4px;font-size:9.5pt;font-weight:700;width:20%;">P. Unit.</th>
+        <th style="text-align:right;padding:6px 4px;font-size:9.5pt;font-weight:700;width:20%;">Total</th>
+      </tr>
+    </thead>
+    <tbody>${filasHTML}</tbody>
+  </table>
+
+  <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:16px;">
+    <div style="flex:1;font-size:9pt;color:#374151;padding-right:20px;">
+      ${doc.notas ? `<strong>Notas:</strong> ${doc.notas}` : ''}
+    </div>
+    <div style="min-width:200px;">
+      <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:9.5pt;">
+        <span style="color:#555;">Subtotal</span><span>${formatCLP(subtotal)}</span>
       </div>
-      <div style="text-align:right;">
-        <div style="font-size:1.3rem;font-weight:800;color:${color};">${tipoLabels[doc.tipo]||'DOCUMENTO'}</div>
-        <div style="font-size:.9rem;font-weight:700;margin-top:.2rem;">${doc.number||'—'}</div>
-        <div style="font-size:.78rem;color:#6b7280;margin-top:.35rem;">Fecha: ${doc.date||(doc.fecha?doc.fecha.split('T')[0]:'')||'—'}</div>
+      <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:9.5pt;">
+        <span style="color:#555;">IVA (19%)</span><span>${formatCLP(iva)}</span>
+      </div>
+      <hr style="border:none;border-top:2px solid #111;margin:4px 0;">
+      <div style="display:flex;justify-content:space-between;font-weight:700;font-size:11pt;">
+        <span>Total</span><span>${formatCLP(total)}</span>
       </div>
     </div>
-    ${doc.cliente ? `<div style="background:#f9fafb;padding:.75rem 1rem;border-radius:6px;margin-bottom:1rem;font-size:.8rem;">
-      <div style="font-size:.7rem;font-weight:600;color:#9ca3af;text-transform:uppercase;margin-bottom:.35rem;">Cliente</div>
-      <strong>${doc.cliente.razon_social||'—'}</strong>
-      ${doc.cliente.rut       ? `<span style="color:#6b7280;"> · RUT: ${doc.cliente.rut}</span>`             : ''}
-      ${doc.cliente.direccion ? `<div style="color:#6b7280;margin-top:.2rem;">${doc.cliente.direccion}</div>` : ''}
-      ${doc.cliente.email     ? `<div style="color:#6b7280;">${doc.cliente.email}</div>`                     : ''}
-    </div>` : ''}
-    <table>
-      <thead><tr>
-        <th style="width:45%;">Descripción</th>
-        <th style="width:15%;text-align:center;">Cant.</th>
-        <th style="width:20%;text-align:right;">P. Unit.</th>
-        <th style="width:20%;text-align:right;">Total</th>
-      </tr></thead>
-      <tbody>
-        ${lineas.length
-          ? lineas.map(l=>`<tr>
-              <td>${l.descripcion||'—'}</td>
-              <td style="text-align:center;">${l.cantidad||1}</td>
-              <td style="text-align:right;">${formatCLP(l.precio_unit||0)}</td>
-              <td style="text-align:right;font-weight:500;">${formatCLP(l.subtotal||0)}</td>
-            </tr>`).join('')
-          : '<tr><td colspan="4" style="text-align:center;color:#9ca3af;padding:1rem;">Sin items</td></tr>'}
-      </tbody>
-    </table>
-    <div style="display:flex;justify-content:flex-end;margin-top:.75rem;">
-      <div style="min-width:200px;font-size:.82rem;">
-        <div style="display:flex;justify-content:space-between;margin-bottom:.25rem;"><span style="color:#6b7280;">Subtotal</span><span>${formatCLP(subtotal)}</span></div>
-        <div style="display:flex;justify-content:space-between;margin-bottom:.25rem;"><span style="color:#6b7280;">IVA (19%)</span><span>${formatCLP(iva)}</span></div>
-        <div style="display:flex;justify-content:space-between;font-weight:700;font-size:.95rem;border-top:2px solid ${color};padding-top:.35rem;margin-top:.35rem;">
-          <span>Total</span><span style="color:${color};">${formatCLP(total)}</span>
-        </div>
-      </div>
-    </div>
-    ${doc.notas ? `<div style="margin-top:1rem;padding:.75rem;background:#f9fafb;border-radius:6px;font-size:.78rem;color:#374151;"><strong>Notas:</strong> ${doc.notas}</div>` : ''}
-    <div style="margin-top:1.5rem;padding-top:.75rem;border-top:1px solid #e5e7eb;font-size:.72rem;color:#9ca3af;text-align:center;">${pie}</div>
-  </div>`;
+  </div>
+
+  <div style="margin-top:40px;padding-top:8px;border-top:1px solid #ccc;font-size:8pt;color:#9ca3af;text-align:center;">${pie}</div>
+  `;
 }
 
 async function guardarDocumento() {
