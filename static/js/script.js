@@ -1191,8 +1191,6 @@ function showError(tbodyId, msg, cols=6) {
   if (el) el.innerHTML = `<tr><td colspan="${cols}" class="empty-table-message" style="color:#f87171;"><i class="fas fa-exclamation-circle" style="margin-right:.5rem;"></i>${msg}</td></tr>`;
 }
 
-} // ── fin bloque if pathname !== /login ──────────────────────────
-
 // ── Exponer funciones al scope global (necesario para onclick inline) ──
 window.crearCliente            = crearCliente;
 window.editarCliente           = editarCliente;
@@ -1239,3 +1237,5 @@ window.handleLogoUpload        = handleLogoUpload;
 window.cambiarColor            = cambiarColor;
 window.cambiarColorDocCustom   = cambiarColorDocCustom;
 window.doLogout                = doLogout;
+
+} // ── fin bloque if pathname !== /login ──────────────────────────

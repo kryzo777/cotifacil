@@ -283,5 +283,7 @@ def api_stats():
         return jsonify({"total_documents":len(db['documents']),"total_clients":len(db['clients']),"total_products":len(db['products']),"total_sales":total_sales,"recent_documents":recent_docs,"client_stats":client_stats,"doc_type_stats":doc_type_stats})
     except Exception as e: return jsonify({"success":False,"error":str(e)}), 500
 
+init_db()
+
 if __name__ == '__main__':
-    init_db(); app.run(debug=True)
+    app.run(debug=True)
