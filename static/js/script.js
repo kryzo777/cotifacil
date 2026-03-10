@@ -522,18 +522,16 @@ function descargarPDF(id) {
     <meta charset="utf-8">
     <title>${escHtml(doc.number||'Documento')}</title>
     <style>
-      *{box-sizing:border-box;margin:0;padding:0;}
-      body{font-family:Arial,Helvetica,sans-serif;padding:2.5rem;color:#111;font-size:.85rem;}
+      *{box-sizing:border-box;}
+      body{font-family:Arial,Helvetica,sans-serif;margin:0;padding:2rem;color:#111;}
       table{width:100%;border-collapse:collapse;}
-      @media print{
-        body{padding:1.5cm;}
-        @page{margin:1.5cm;}
-        button{display:none!important;}
-      }
+      th{background:#f3f4f6;padding:.5rem .7rem;text-align:left;font-size:.8rem;border-bottom:1px solid #d1d5db;}
+      td{padding:.45rem .7rem;border-bottom:1px solid #e5e7eb;font-size:.82rem;}
+      @media print{body{padding:1rem;} button{display:none!important;}}
     </style>
   </head><body>
     ${htmlContent}
-    <script>setTimeout(()=>{window.print();},500);<\/script>
+    <script>setTimeout(()=>{window.print();},400);<\/script>
   </body></html>`);
   ventana.document.close();
 }
@@ -713,9 +711,8 @@ function actualizarPreview() {
   if (!tipo) return;
   const preview = document.getElementById('doc-live-preview');
   if (preview) preview.innerHTML = generarHTMLDoc({
-    tipo, cliente, fecha, notas,
-    condicion_venta: document.getElementById('doc-condicion')?.value || '',
-    lineas, subtotal: subtotalN, iva: ivaN, total: totalN,
+    tipo, cliente, fecha, notas, lineas,
+    subtotal: subtotalN, iva: ivaN, total: totalN,
     number:'VISTA PREVIA'
   });
 }
@@ -727,10 +724,10 @@ function getDocColor() {
 function generarHTMLDoc(doc) {
   const cfg        = App.config || {};
   const tipoLabels = { cotizacion:'COTIZACIÓN', orden_compra:'ORDEN DE COMPRA', factura:'FACTURA' };
+  const color      = getDocColor();
   const empresa    = {
     nombre:    cfg.empresaNombre    || 'Mi Empresa',
     rut:       cfg.empresaRut       || '',
-    giro:      cfg.empresaGiro      || '',
     direccion: cfg.empresaDireccion || '',
     telefono:  cfg.empresaTelefono  || '',
     email:     cfg.empresaEmail     || ''
@@ -740,105 +737,63 @@ function generarHTMLDoc(doc) {
   const iva      = doc.iva     ?? subtotal * 0.19;
   const total    = doc.total   ?? subtotal + iva;
   const pie      = cfg.piePagina || 'Gracias por su preferencia.';
-  const fechaDoc = doc.date ? doc.date.split(' ')[0] : (doc.fecha ? doc.fecha.split('T')[0] : '—');
-  const validez  = doc.validez || 30;
   const logoHTML = cfg.logo
-    ? `<img src="${cfg.logo}" style="max-height:70px;max-width:180px;object-fit:contain;">`
-    : `<div style="display:inline-block;border:3px solid #111;padding:.3rem .8rem;font-size:1.5rem;font-weight:900;letter-spacing:1px;color:#111;">${empresa.nombre}</div>`;
+    ? `<img src="${cfg.logo}" style="max-height:60px;max-width:160px;object-fit:contain;">`
+    : `<div style="font-size:1.4rem;font-weight:700;color:${color};">${empresa.nombre}</div>`;
+  const mostrarEmpresa = cfg.mostrarEmpresa !== false;
 
-  const tipoLabel = tipoLabels[doc.tipo] || 'DOCUMENTO';
-
-  return `
-  <div style="font-family:Arial,Helvetica,sans-serif;max-width:720px;margin:0 auto;color:#111;font-size:.85rem;">
-
-    <!-- CABECERA -->
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;">
-      <!-- Logo + datos empresa -->
-      <div style="flex:1;">
-        ${logoHTML}
-        <div style="margin-top:.5rem;font-size:.78rem;color:#333;line-height:1.6;">
-          ${empresa.giro      ? `Giro: ${empresa.giro}<br>`           : ''}
-          ${empresa.direccion ? `Dirección: ${empresa.direccion}<br>` : ''}
-          ${empresa.telefono  ? `Tel: ${empresa.telefono}<br>`        : ''}
-          Fecha: ${fechaDoc}
-        </div>
+  return `<div style="max-width:700px;margin:0 auto;">
+    <div class="doc-preview-header">
+      <div>
+        ${cfg.mostrarLogo !== false ? logoHTML : `<div style="font-size:1.4rem;font-weight:700;color:${color};">${empresa.nombre}</div>`}
+        ${mostrarEmpresa ? `<div style="font-size:.75rem;color:#6b7280;margin-top:.35rem;">
+          ${empresa.rut       ? `RUT: ${empresa.rut}<br>` : ''}
+          ${empresa.direccion ? `${empresa.direccion}<br>` : ''}
+          ${empresa.telefono  ? `Tel: ${empresa.telefono}` : ''}
+        </div>` : ''}
       </div>
-      <!-- Caja tipo documento -->
-      <div style="border:2px solid #111;padding:.6rem 1.2rem;text-align:center;min-width:180px;">
-        <div style="font-size:1.3rem;font-weight:900;letter-spacing:1px;">${tipoLabel}</div>
-        <div style="font-size:1rem;font-weight:700;margin-top:.2rem;">${doc.number||'—'}</div>
-        ${empresa.rut ? `<div style="font-size:.78rem;margin-top:.2rem;">RUT: ${empresa.rut}</div>` : ''}
+      <div style="text-align:right;">
+        <div style="font-size:1.3rem;font-weight:800;color:${color};">${tipoLabels[doc.tipo]||'DOCUMENTO'}</div>
+        <div style="font-size:.9rem;font-weight:700;margin-top:.2rem;">${doc.number||'—'}</div>
+        <div style="font-size:.78rem;color:#6b7280;margin-top:.35rem;">Fecha: ${doc.date||(doc.fecha?doc.fecha.split('T')[0]:'')||'—'}</div>
       </div>
     </div>
-
-    <!-- LÍNEA DIVISORIA -->
-    <hr style="border:none;border-top:1px solid #ccc;margin-bottom:1rem;">
-
-    <!-- CLIENTE + CONDICIONES -->
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.2rem;">
-      <div style="flex:1;">
-        <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;color:#555;margin-bottom:.3rem;">CLIENTE</div>
-        <div style="font-weight:700;font-size:.92rem;">
-          ${doc.cliente?.razon_social||'—'}${doc.cliente?.rut ? ` · RUT: ${doc.cliente.rut}` : ''}
-        </div>
-        ${doc.cliente?.direccion ? `<div style="color:#333;margin-top:.15rem;">${doc.cliente.direccion}</div>` : ''}
-        ${doc.cliente?.email     ? `<div style="color:#333;">${doc.cliente.email}</div>`                       : ''}
-      </div>
-      <div style="text-align:right;font-size:.82rem;color:#333;line-height:1.8;">
-        ${doc.condicion_venta ? `Condición de venta: ${doc.condicion_venta}<br>` : ''}
-        Vigencia: ${validez} días
-      </div>
-    </div>
-
-    <!-- LÍNEA DIVISORIA -->
-    <hr style="border:none;border-top:1px solid #ccc;margin-bottom:.8rem;">
-
-    <!-- TABLA DE ITEMS -->
-    <table style="width:100%;border-collapse:collapse;margin-bottom:1rem;">
-      <thead>
-        <tr style="border-bottom:2px solid #111;">
-          <th style="text-align:left;padding:.5rem .4rem;font-size:.82rem;font-weight:700;">Descripción</th>
-          <th style="text-align:center;padding:.5rem .4rem;font-size:.82rem;font-weight:700;width:10%;">Cant.</th>
-          <th style="text-align:right;padding:.5rem .4rem;font-size:.82rem;font-weight:700;width:18%;">P. Unit.</th>
-          <th style="text-align:right;padding:.5rem .4rem;font-size:.82rem;font-weight:700;width:18%;">Total</th>
-        </tr>
-      </thead>
+    ${doc.cliente ? `<div style="background:#f9fafb;padding:.75rem 1rem;border-radius:6px;margin-bottom:1rem;font-size:.8rem;">
+      <div style="font-size:.7rem;font-weight:600;color:#9ca3af;text-transform:uppercase;margin-bottom:.35rem;">Cliente</div>
+      <strong>${doc.cliente.razon_social||'—'}</strong>
+      ${doc.cliente.rut       ? `<span style="color:#6b7280;"> · RUT: ${doc.cliente.rut}</span>`             : ''}
+      ${doc.cliente.direccion ? `<div style="color:#6b7280;margin-top:.2rem;">${doc.cliente.direccion}</div>` : ''}
+      ${doc.cliente.email     ? `<div style="color:#6b7280;">${doc.cliente.email}</div>`                     : ''}
+    </div>` : ''}
+    <table>
+      <thead><tr>
+        <th style="width:45%;">Descripción</th>
+        <th style="width:15%;text-align:center;">Cant.</th>
+        <th style="width:20%;text-align:right;">P. Unit.</th>
+        <th style="width:20%;text-align:right;">Total</th>
+      </tr></thead>
       <tbody>
         ${lineas.length
-          ? lineas.map(l=>`
-            <tr style="border-bottom:1px solid #e5e7eb;">
-              <td style="padding:.5rem .4rem;">${l.descripcion||'—'}</td>
-              <td style="padding:.5rem .4rem;text-align:center;">${l.cantidad||1}</td>
-              <td style="padding:.5rem .4rem;text-align:right;">${formatCLP(l.precio_unit||0)}</td>
-              <td style="padding:.5rem .4rem;text-align:right;font-weight:500;">${formatCLP(l.subtotal||0)}</td>
+          ? lineas.map(l=>`<tr>
+              <td>${l.descripcion||'—'}</td>
+              <td style="text-align:center;">${l.cantidad||1}</td>
+              <td style="text-align:right;">${formatCLP(l.precio_unit||0)}</td>
+              <td style="text-align:right;font-weight:500;">${formatCLP(l.subtotal||0)}</td>
             </tr>`).join('')
-          : `<tr><td colspan="4" style="padding:1rem;text-align:center;color:#9ca3af;">Sin items</td></tr>`}
+          : '<tr><td colspan="4" style="text-align:center;color:#9ca3af;padding:1rem;">Sin items</td></tr>'}
       </tbody>
     </table>
-
-    <!-- NOTAS + TOTALES -->
-    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:.5rem;">
-      <div style="flex:1;font-size:.82rem;color:#374151;">
-        ${doc.notas ? `<strong>Notas:</strong> ${doc.notas}` : ''}
-      </div>
-      <div style="min-width:220px;">
-        <hr style="border:none;border-top:1px solid #ccc;margin-bottom:.5rem;">
-        <div style="display:flex;justify-content:space-between;padding:.2rem 0;font-size:.82rem;">
-          <span>Subtotal</span><span>${formatCLP(subtotal)}</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;padding:.2rem 0;font-size:.82rem;">
-          <span>IVA (19%)</span><span>${formatCLP(iva)}</span>
-        </div>
-        <hr style="border:none;border-top:2px solid #111;margin:.4rem 0;">
-        <div style="display:flex;justify-content:space-between;font-weight:700;font-size:1rem;">
-          <span>Total</span><span>${formatCLP(total)}</span>
+    <div style="display:flex;justify-content:flex-end;margin-top:.75rem;">
+      <div style="min-width:200px;font-size:.82rem;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:.25rem;"><span style="color:#6b7280;">Subtotal</span><span>${formatCLP(subtotal)}</span></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:.25rem;"><span style="color:#6b7280;">IVA (19%)</span><span>${formatCLP(iva)}</span></div>
+        <div style="display:flex;justify-content:space-between;font-weight:700;font-size:.95rem;border-top:2px solid ${color};padding-top:.35rem;margin-top:.35rem;">
+          <span>Total</span><span style="color:${color};">${formatCLP(total)}</span>
         </div>
       </div>
     </div>
-
-    <!-- PIE -->
-    <hr style="border:none;border-top:1px solid #ccc;margin-top:2rem;margin-bottom:.5rem;">
-    <div style="text-align:center;font-size:.75rem;color:#9ca3af;">${pie}</div>
+    ${doc.notas ? `<div style="margin-top:1rem;padding:.75rem;background:#f9fafb;border-radius:6px;font-size:.78rem;color:#374151;"><strong>Notas:</strong> ${doc.notas}</div>` : ''}
+    <div style="margin-top:1.5rem;padding-top:.75rem;border-top:1px solid #e5e7eb;font-size:.72rem;color:#9ca3af;text-align:center;">${pie}</div>
   </div>`;
 }
 
@@ -857,15 +812,9 @@ async function guardarDocumento() {
   const payload = {
     tipo,
     cliente,
-    fecha:            document.getElementById('doc-fecha')?.value,
-    validez:          parseInt(document.getElementById('doc-validez')?.value) || 30,
-    notas:            document.getElementById('doc-notas')?.value || '',
-    condicion_venta:  document.getElementById('doc-condicion')?.value || '',
-    empresa_nombre:   cfg.empresaNombre    || '',
-    empresa_rut:      cfg.empresaRut       || '',
-    empresa_giro:     cfg.empresaGiro      || '',
-    empresa_direccion:cfg.empresaDireccion || '',
-    empresa_telefono: cfg.empresaTelefono  || '',
+    fecha:   document.getElementById('doc-fecha')?.value,
+    validez: parseInt(document.getElementById('doc-validez')?.value) || 30,
+    notas:   document.getElementById('doc-notas')?.value || '',
     items:   lineas,
     subtotal, iva, total,
     enviar_email: enviarEmail
@@ -1242,8 +1191,6 @@ function showError(tbodyId, msg, cols=6) {
   if (el) el.innerHTML = `<tr><td colspan="${cols}" class="empty-table-message" style="color:#f87171;"><i class="fas fa-exclamation-circle" style="margin-right:.5rem;"></i>${msg}</td></tr>`;
 }
 
-} // ── fin bloque if pathname !== /login ──────────────────────────
-
 // ── Exponer funciones al scope global (necesario para onclick inline) ──
 window.crearCliente            = crearCliente;
 window.editarCliente           = editarCliente;
@@ -1290,3 +1237,5 @@ window.handleLogoUpload        = handleLogoUpload;
 window.cambiarColor            = cambiarColor;
 window.cambiarColorDocCustom   = cambiarColorDocCustom;
 window.doLogout                = doLogout;
+
+} // ── fin bloque if pathname !== /login ──────────────────────────
