@@ -565,6 +565,7 @@ tr:last-child td {
 
 .justify-between {
     justify-content: space-between;
+    margin-bottom: 15px;
 }
 
 .gap-6 {
@@ -599,6 +600,7 @@ tr:last-child td {
     align-items: center;
     gap: 0.5rem;
     margin-bottom: 15px;
+    margin-right: 15px;
 }
 
 .btn-secondary:hover {
@@ -876,4 +878,5 @@ select.modal-input option {
 textarea.modal-input {
     resize: vertical;
     min-height: 80px;
+}
 }
