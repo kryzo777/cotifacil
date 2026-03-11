@@ -2,7 +2,7 @@
    CotiFácil — script.js  (versión completa con todas las mejoras)
    ================================================================ */
 
-if (window.location.pathname !== '/login') {
+if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
 
 // ── Estado global ─────────────────────────────────────────────────
 const App = {
