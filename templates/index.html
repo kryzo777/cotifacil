@@ -79,6 +79,7 @@ textarea.modal-input{resize:vertical;min-height:70px}
       <a href="#productos" class="nav-link" data-page="productos"><i class="fas fa-boxes nav-icon"></i><span class="nav-text">Productos</span></a>
       <a href="#documentos" class="nav-link" data-page="documentos"><i class="fas fa-file-alt nav-icon"></i><span class="nav-text">Documentos</span></a>
       <a href="#crear-documento" class="nav-link" data-page="crear-documento"><i class="fas fa-file-invoice-dollar nav-icon"></i><span class="nav-text">Crear Documento</span></a>
+      <a href="#proveedores" class="nav-link" data-page="proveedores"><i class="fas fa-truck nav-icon"></i><span class="nav-text">Proveedores</span></a>
       <a href="#reportes" class="nav-link" data-page="reportes"><i class="fas fa-chart-bar nav-icon"></i><span class="nav-text">Reportes</span></a>
     </nav>
     <div class="sidebar-footer">
@@ -383,13 +384,14 @@ textarea.modal-input{resize:vertical;min-height:70px}
               <div class="card">
                 <h3 style="font-size:.78rem;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:1rem;">Datos del Documento</h3>
                 <div style="display:flex;flex-direction:column;gap:.75rem;">
-                  <div><label class="modal-label">Cliente *</label><select id="doc-cliente" class="modal-input" onchange="onClienteChange()"><option value="">— Seleccionar cliente —</option></select></div>
+                  <div id="doc-cliente-row"><label class="modal-label">Cliente *</label><select id="doc-cliente" class="modal-input" onchange="onClienteChange()"><option value="">— Seleccionar cliente —</option></select></div>
+                  <div id="doc-proveedor-row" style="display:none;"><label class="modal-label">Proveedor *</label><select id="doc-proveedor" class="modal-input" onchange="onProveedorChange()"><option value="">— Seleccionar proveedor —</option></select></div>
                   <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">
                     <div><label class="modal-label">Fecha</label><input type="date" id="doc-fecha" class="modal-input" onchange="actualizarPreview()"></div>
                     <div><label class="modal-label">Válido (días)</label><input type="number" id="doc-validez" class="modal-input" value="30" onchange="actualizarPreview()"></div>
                   </div>
                   <div><label class="modal-label">Notas / Condiciones</label><textarea id="doc-notas" class="modal-input" rows="2" placeholder="Condiciones de pago, entrega..." onkeyup="actualizarPreview()"></textarea></div>
-                  <div class="toggle-wrap" style="margin-top:.1rem;">
+                  <div id="doc-enviar-email-row" class="toggle-wrap" style="margin-top:.1rem;">
                     <div>
                       <span style="font-size:.875rem;color:#e2e8f0;font-weight:500;">Enviar PDF al cliente por email</span>
                       <p id="doc-email-hint" style="font-size:.75rem;color:#64748b;margin-top:.1rem;">Selecciona un cliente con email registrado</p>
@@ -448,41 +450,102 @@ textarea.modal-input{resize:vertical;min-height:70px}
         </div>
 
         <!-- Modal editar documento -->
-        <div id="editar-documento-modal" class="modal">
-          <div class="modal-backdrop" onclick="hideModal('editar-documento-modal')"></div>
+        <!-- Modal Cambiar Estado -->
+        <div id="cambiar-estado-modal" class="modal">
+          <div class="modal-backdrop" onclick="hideModal('cambiar-estado-modal')"></div>
           <div class="modal-content">
             <div class="modal-inner">
               <div class="modal-header">
-                <h2 class="modal-title" id="editar-doc-title">Editar Documento</h2>
-                <button class="modal-close" onclick="hideModal('editar-documento-modal')"><i class="fas fa-times"></i></button>
+                <h2 class="modal-title" id="estado-doc-title">Cambiar Estado</h2>
+                <button class="modal-close" onclick="hideModal('cambiar-estado-modal')"><i class="fas fa-times"></i></button>
               </div>
               <div class="modal-body">
-                <input type="hidden" id="editar-doc-id">
-                <div style="display:flex;flex-direction:column;gap:.75rem;">
-                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">
-                    <div><label class="modal-label">Estado</label>
-                      <select id="editar-doc-estado" class="modal-input">
-                        <option value="pendiente">Pendiente</option>
-                        <option value="aprobado">Aprobado</option>
-                        <option value="rechazado">Rechazado</option>
-                      </select>
-                    </div>
-                    <div><label class="modal-label">Validez (días)</label><input type="number" id="editar-doc-validez" class="modal-input" value="30"></div>
+                <input type="hidden" id="estado-doc-id">
+                <div style="display:flex;flex-direction:column;gap:1rem;">
+                  <div>
+                    <label class="modal-label">Nuevo Estado</label>
+                    <select id="estado-select" class="modal-input"></select>
                   </div>
-                  <div><label class="modal-label">Notas</label><textarea id="editar-doc-notas" class="modal-input" rows="3"></textarea></div>
+                  <div id="conv-factura-wrap" style="display:none;padding:.875rem;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:10px;">
+                    <p style="font-size:.875rem;color:#34d399;font-weight:600;margin-bottom:.5rem;"><i class="fas fa-file-invoice-dollar"></i> Cotización Aceptada</p>
+                    <p style="font-size:.82rem;color:#94a3b8;margin-bottom:.75rem;">Esta cotización está aceptada. Puedes convertirla en Factura con un clic.</p>
+                    <button onclick="convertirAFactura(parseInt(document.getElementById('estado-doc-id').value))" style="background:linear-gradient(135deg,#059669,#10b981);color:white;border:none;border-radius:8px;padding:.6rem 1.2rem;font-size:.875rem;font-weight:600;cursor:pointer;width:100%;"><i class="fas fa-magic"></i> Convertir a Factura</button>
+                  </div>
                 </div>
                 <div class="flex justify-end gap-2" style="margin-top:1.25rem;">
-                  <button class="btn-secondary" onclick="hideModal('editar-documento-modal')">Cancelar</button>
-                  <button class="btn-primary" onclick="confirmarEditarDoc()"><i class="fas fa-save"></i> Guardar cambios</button>
+                  <button class="btn-secondary" onclick="hideModal('cambiar-estado-modal')">Cancelar</button>
+                  <button class="btn-primary" onclick="confirmarCambiarEstado()"><i class="fas fa-check"></i> Actualizar Estado</button>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
+        <!-- Campos ocultos para compatibilidad -->
+        <input type="hidden" id="editar-doc-id">
+        <input type="hidden" id="editar-doc-estado">
+        <input type="hidden" id="editar-doc-validez">
+        <input type="hidden" id="editar-doc-notas">
+
+        <!-- Modal Proveedor -->
+        <div id="proveedor-modal" class="modal">
+          <div class="modal-backdrop" onclick="hideModal('proveedor-modal')"></div>
+          <div class="modal-content">
+            <div class="modal-inner">
+              <div class="modal-header">
+                <h2 class="modal-title" id="prov-modal-title">Nuevo Proveedor</h2>
+                <button class="modal-close" onclick="hideModal('proveedor-modal')"><i class="fas fa-times"></i></button>
+              </div>
+              <div class="modal-body">
+                <input type="hidden" id="prov-id">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">
+                  <div style="grid-column:1/-1;"><label class="modal-label">Nombre / Razón Social *</label><input type="text" id="prov-nombre" class="modal-input" placeholder="Empresa o persona"></div>
+                  <div><label class="modal-label">RUT</label><input type="text" id="prov-rut" class="modal-input" placeholder="12.345.678-9"></div>
+                  <div><label class="modal-label">Contacto</label><input type="text" id="prov-contacto" class="modal-input" placeholder="Nombre del contacto"></div>
+                  <div><label class="modal-label">Email</label><input type="email" id="prov-email" class="modal-input" placeholder="correo@proveedor.com"></div>
+                  <div><label class="modal-label">Teléfono</label><input type="text" id="prov-telefono" class="modal-input" placeholder="+56 9 ..."></div>
+                  <div style="grid-column:1/-1;"><label class="modal-label">Dirección</label><input type="text" id="prov-direccion" class="modal-input" placeholder="Dirección del proveedor"></div>
+                  <div style="grid-column:1/-1;"><label class="modal-label">Nota</label><textarea id="prov-nota" class="modal-input" rows="2" placeholder="Notas internas..."></textarea></div>
+                </div>
+                <div class="flex justify-end gap-2" style="margin-top:1.25rem;">
+                  <button class="btn-secondary" onclick="hideModal('proveedor-modal')">Cancelar</button>
+                  <button class="btn-primary" onclick="guardarProveedor()"><i class="fas fa-save"></i> Guardar</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+          </div>
+        </div>
+
       </div>
 
       <!-- REPORTES -->
+      <!-- PROVEEDORES PAGE -->
+      <div id="proveedores-page" class="page-content hidden">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-xl font-semibold">Proveedores</h2>
+          <button class="btn-primary" onclick="crearProveedor()"><i class="fas fa-plus"></i> Nuevo Proveedor</button>
+        </div>
+        <div class="card">
+          <div class="table-container">
+            <table>
+              <thead><tr>
+                <th>Nombre / Razón Social</th>
+                <th>RUT</th>
+                <th>Email</th>
+                <th>Teléfono</th>
+                <th>Órdenes</th>
+                <th>Acciones</th>
+              </tr></thead>
+              <tbody id="proveedores-table-body">
+                <tr><td colspan="6" class="empty-table-message">Cargando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <div id="reportes-page" class="page-content hidden">
         <div id="reportes-content"><p class="text-gray-400">Cargando reportes...</p></div>
       </div>

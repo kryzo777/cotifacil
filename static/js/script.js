@@ -10,11 +10,29 @@ const App = {
   clients:     [],
   products:    [],
   documents:   [],
+  providers:   [],
   user:        null,
   config:      {},
   csvClientes: [],
   csvProductos:[],
   docViendoId: null,
+};
+
+// ── Constantes de estados por tipo ────────────────────────────────
+const ESTADOS = {
+  cotizacion:   ['borrador','enviada','aceptada','rechazada','vencida'],
+  factura:      ['pendiente','enviada','pagada','anulada'],
+  orden_compra: ['borrador','enviada','recibida','cancelada'],
+};
+const ESTADO_LABEL = {
+  borrador:'Borrador', enviada:'Enviada', aceptada:'Aceptada', rechazada:'Rechazada',
+  vencida:'Vencida',  pendiente:'Pendiente', pagada:'Pagada', anulada:'Anulada',
+  recibida:'Recibida', cancelada:'Cancelada',
+};
+const ESTADO_COLOR = {
+  borrador:'#64748b', enviada:'#3b82f6', aceptada:'#10b981', rechazada:'#ef4444',
+  vencida:'#f59e0b',  pendiente:'#f59e0b', pagada:'#10b981',  anulada:'#ef4444',
+  recibida:'#10b981', cancelada:'#ef4444',
 };
 
 // ── Init ──────────────────────────────────────────────────────────
@@ -65,6 +83,15 @@ async function loadUser() {
         if (n) n.textContent = App.user.name  || 'Usuario';
         if (e) e.textContent = App.user.email || '';
       }
+      // Cargar config del servidor
+      try {
+        const cfgRes  = await fetch('/api/user/config');
+        const cfgData = await cfgRes.json();
+        if (cfgData && !cfgData.error) {
+          App.config = { ...App.config, ...cfgData };
+          aplicarConfig();
+        }
+      } catch(e) {}
     } else { window.location.href = '/login'; }
   } catch { window.location.href = '/login'; }
 }
@@ -99,17 +126,18 @@ function navigateTo(page) {
   if (target) { target.classList.remove('hidden'); target.classList.add('active'); }
   const navLink = document.querySelector(`.nav-link[data-page="${page}"]`);
   if (navLink) navLink.classList.add('active');
-  const titles = { dashboard:'Dashboard', clientes:'Clientes', productos:'Productos', documentos:'Documentos', 'crear-documento':'Crear Documento', reportes:'Reportes' };
+  const titles = { dashboard:'Dashboard', clientes:'Clientes', productos:'Productos', documentos:'Documentos', 'crear-documento':'Crear Documento', proveedores:'Proveedores', reportes:'Reportes' };
   const titleEl = document.querySelector('.page-title');
   if (titleEl) titleEl.textContent = titles[page] || page;
   App.currentPage = page;
   switch (page) {
-    case 'dashboard':       loadDashboard();   break;
-    case 'clientes':        loadClients();     break;
-    case 'productos':       loadProducts();    break;
-    case 'documentos':      loadDocuments();   break;
-    case 'crear-documento': initCrearDoc();    break;
-    case 'reportes':        loadReportes();    break;
+    case 'dashboard':       loadDashboard();      break;
+    case 'clientes':        loadClients();        break;
+    case 'productos':       loadProducts();       break;
+    case 'documentos':      loadDocuments();      break;
+    case 'crear-documento': initCrearDoc();       break;
+    case 'proveedores':     loadProveedoresPage(); break;
+    case 'reportes':        loadReportes();       break;
   }
 }
 
@@ -430,23 +458,40 @@ function renderDocuments(list) {
   const tbody = document.getElementById('documents-table-body');
   if (!tbody) return;
   if (!list.length) { tbody.innerHTML = `<tr><td colspan="7" class="empty-table-message">No hay documentos registrados</td></tr>`; return; }
-  tbody.innerHTML = list.map(d => `
+  tbody.innerHTML = list.map(d => {
+    const estado    = d.estado || (d.tipo === 'factura' ? 'pendiente' : 'borrador');
+    const estadoColor = ESTADO_COLOR[estado] || '#64748b';
+    const dest      = d.tipo === 'orden_compra'
+      ? (d.proveedor?.nombre || d.proveedor?.razon_social || '—')
+      : (d.cliente?.razon_social || '—');
+    const puedeConvertir = d.tipo === 'cotizacion' && estado === 'aceptada' && !d.factura_id;
+    const refBadge = d.origen_number
+      ? `<br><span style="font-size:.7rem;color:#64748b;">↑ ${d.origen_number}</span>`
+      : (d.factura_number ? `<br><span style="font-size:.7rem;color:#10b981;">→ ${d.factura_number}</span>` : '');
+    return `
     <tr>
-      <td style="font-weight:500;">${d.number||'—'}</td>
+      <td style="font-weight:500;">${d.number||'—'}${refBadge}</td>
       <td><span class="badge badge-${d.tipo||'cotizacion'}">${tipoLabel(d.tipo)}</span></td>
       <td>${d.date ? d.date.split(' ')[0] : '—'}</td>
-      <td>${d.cliente?.razon_social||'—'}</td>
+      <td>${dest}</td>
       <td>${formatCLP(d.total||0)}</td>
-      <td><span class="badge badge-${d.estado||'pendiente'}">${capitalize(d.estado||'pendiente')}</span></td>
       <td>
-        <div class="flex gap-2">
-          <button onclick="verDocumento(${d.id})"      style="color:#60a5fa;background:none;border:none;cursor:pointer;padding:.3rem;" title="Ver"><i class="fas fa-eye"></i></button>
-          <button onclick="editarDocumento(${d.id})"   style="color:#fbbf24;background:none;border:none;cursor:pointer;padding:.3rem;" title="Editar"><i class="fas fa-edit"></i></button>
-          <button onclick="descargarPDF(${d.id})"      style="color:#34d399;background:none;border:none;cursor:pointer;padding:.3rem;" title="PDF"><i class="fas fa-file-pdf"></i></button>
-          <button onclick="eliminarDocumento(${d.id})" style="color:#f87171;background:none;border:none;cursor:pointer;padding:.3rem;" title="Eliminar"><i class="fas fa-trash"></i></button>
+        <span style="display:inline-flex;align-items:center;gap:.35rem;padding:.25rem .6rem;border-radius:999px;font-size:.75rem;font-weight:600;background:${estadoColor}22;color:${estadoColor};">
+          <span style="width:6px;height:6px;border-radius:50%;background:${estadoColor};flex-shrink:0;"></span>
+          ${ESTADO_LABEL[estado] || estado}
+        </span>
+      </td>
+      <td>
+        <div class="flex gap-2" style="flex-wrap:wrap;">
+          <button onclick="verDocumento(${d.id})"        style="color:#60a5fa;background:none;border:none;cursor:pointer;padding:.3rem;" title="Ver"><i class="fas fa-eye"></i></button>
+          <button onclick="cambiarEstadoDoc(${d.id})"    style="color:#a78bfa;background:none;border:none;cursor:pointer;padding:.3rem;" title="Cambiar estado"><i class="fas fa-exchange-alt"></i></button>
+          <button onclick="descargarPDF(${d.id})"        style="color:#34d399;background:none;border:none;cursor:pointer;padding:.3rem;" title="PDF"><i class="fas fa-file-pdf"></i></button>
+          ${puedeConvertir ? `<button onclick="convertirAFactura(${d.id})" style="color:#10b981;background:none;border:none;cursor:pointer;padding:.3rem;font-weight:700;" title="Convertir a Factura"><i class="fas fa-file-invoice-dollar"></i></button>` : ''}
+          <button onclick="eliminarDocumento(${d.id})"   style="color:#f87171;background:none;border:none;cursor:pointer;padding:.3rem;" title="Eliminar"><i class="fas fa-trash"></i></button>
         </div>
       </td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 }
 
 function filtrarDocumentos() {
@@ -481,6 +526,65 @@ function editarDocumento(id) {
   const title = document.getElementById('editar-doc-title');
   if (title) title.textContent = `Editar: ${doc.number||'Documento'}`;
   showModal('editar-documento-modal');
+}
+
+function cambiarEstadoDoc(id) {
+  const doc = App.documents.find(d => d.id === id);
+  if (!doc) return;
+  const tipo        = doc.tipo || 'cotizacion';
+  const estadoActual= doc.estado || (tipo === 'factura' ? 'pendiente' : 'borrador');
+  const estados     = ESTADOS[tipo] || [];
+
+  // Poblar select de estados
+  const sel = document.getElementById('estado-select');
+  if (sel) {
+    sel.innerHTML = estados.map(e =>
+      `<option value="${e}" ${e===estadoActual?'selected':''}>${ESTADO_LABEL[e]||e}</option>`
+    ).join('');
+  }
+  document.getElementById('estado-doc-id').value = id;
+  const titleEl = document.getElementById('estado-doc-title');
+  if (titleEl) titleEl.textContent = `${doc.number} — Cambiar estado`;
+
+  // Mostrar si puede convertirse a factura
+  const convWrap = document.getElementById('conv-factura-wrap');
+  if (convWrap) {
+    const puedeConvertir = tipo==='cotizacion' && estadoActual==='aceptada' && !doc.factura_id;
+    convWrap.style.display = puedeConvertir ? 'block' : 'none';
+  }
+  showModal('cambiar-estado-modal');
+}
+
+async function confirmarCambiarEstado() {
+  const id     = parseInt(document.getElementById('estado-doc-id').value);
+  const estado = document.getElementById('estado-select').value;
+  try {
+    const res  = await fetch(`/api/documents/${id}`, {
+      method: 'PUT', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ estado })
+    });
+    const data = await res.json();
+    if (data.success) {
+      hideModal('cambiar-estado-modal');
+      showMessage('Estado actualizado','success');
+      await loadDocuments();
+    } else { showMessage(data.error||'Error al actualizar','error'); }
+  } catch { showMessage('Error de conexión','error'); }
+}
+
+async function convertirAFactura(id) {
+  const doc = App.documents.find(d => d.id === id);
+  if (!doc) return;
+  if (!confirm(`¿Convertir la cotización ${doc.number} en Factura? Se creará una nueva factura con los mismos datos.`)) return;
+  try {
+    const res  = await fetch(`/api/documents/${id}/convertir`, { method:'POST' });
+    const data = await res.json();
+    if (data.success) {
+      hideModal('cambiar-estado-modal');
+      showMessage(`Factura ${data.factura.number} creada exitosamente ✓`, 'success');
+      await loadDocuments();
+    } else { showMessage(data.error||'Error al convertir','error'); }
+  } catch { showMessage('Error de conexión','error'); }
 }
 
 async function confirmarEditarDoc() {
@@ -594,13 +698,48 @@ function seleccionarTipoDoc(tipo) {
   const card = document.getElementById(`tipo-${tipo}`);
   if (card) card.classList.add('selected');
   document.getElementById('doc-form-container').style.display = 'block';
-  if (App.clients.length === 0) {
-    fetch('/api/clients').then(r=>r.json()).then(cs=>{ App.clients=cs; popularSelectClientes(); });
-  } else { popularSelectClientes(); }
+
+  // Mostrar/ocultar selector de cliente o proveedor según tipo
+  const clienteRow  = document.getElementById('doc-cliente-row');
+  const proveedorRow= document.getElementById('doc-proveedor-row');
+  const emailToggle = document.getElementById('doc-enviar-email-row');
+  if (tipo === 'orden_compra') {
+    if (clienteRow)   clienteRow.style.display   = 'none';
+    if (proveedorRow) proveedorRow.style.display = 'block';
+    if (emailToggle)  emailToggle.style.display  = 'none';
+    // Cargar proveedores
+    if (App.providers.length === 0) {
+      fetch('/api/providers').then(r=>r.json()).then(ps=>{ App.providers=ps; popularSelectProveedores(); });
+    } else { popularSelectProveedores(); }
+  } else {
+    if (clienteRow)   clienteRow.style.display   = 'block';
+    if (proveedorRow) proveedorRow.style.display = 'none';
+    if (emailToggle)  emailToggle.style.display  = 'block';
+    if (App.clients.length === 0) {
+      fetch('/api/clients').then(r=>r.json()).then(cs=>{ App.clients=cs; popularSelectClientes(); });
+    } else { popularSelectClientes(); }
+  }
+
   if (App.products.length === 0) fetch('/api/products').then(r=>r.json()).then(ps=>{ App.products=ps; });
   const fechaEl = document.getElementById('doc-fecha');
   if (fechaEl && !fechaEl.value) fechaEl.value = new Date().toISOString().split('T')[0];
   if (!document.getElementById('doc-lineas').children.length) agregarLineaDoc();
+  actualizarPreview();
+}
+
+function popularSelectProveedores() {
+  const sel = document.getElementById('doc-proveedor');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— Seleccionar proveedor —</option>';
+  App.providers.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value       = p.id;
+    opt.textContent = `${p.nombre || p.razon_social || ''}${p.rut?' ('+p.rut+')':''}`;
+    sel.appendChild(opt);
+  });
+}
+
+function onProveedorChange() {
   actualizarPreview();
 }
 
@@ -739,6 +878,15 @@ function generarHTMLDoc(doc) {
     direccion: cfg.empresaDireccion || '',
     telefono:  cfg.empresaTelefono  || '',
   };
+  // Para orden de compra, mostrar proveedor en lugar de cliente
+  const esOC       = doc.tipo === 'orden_compra';
+  const destinatario = esOC ? (doc.proveedor || {}) : (doc.cliente || {});
+  const destLabel  = esOC ? 'PROVEEDOR' : 'CLIENTE';
+  const destNombre = destinatario.razon_social || destinatario.nombre || '—';
+  const destRut    = destinatario.rut || '';
+  const destDir    = destinatario.direccion || '';
+  const destEmail  = esOC ? (destinatario.email || '') : (destinatario.email || '');
+
   const lineas   = doc.lineas || doc.items || [];
   const subtotal = doc.subtotal ?? lineas.reduce((s,l)=>s+(l.subtotal||0),0);
   const iva      = doc.iva     ?? subtotal*0.19;
@@ -786,11 +934,11 @@ function generarHTMLDoc(doc) {
 
   <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
     <div style="flex:1;">
-      ${doc.cliente ? `
-        <div style="font-size:7pt;font-weight:700;text-transform:uppercase;color:#555;margin-bottom:3px;letter-spacing:.5px;">CLIENTE</div>
-        <div style="font-weight:700;font-size:10pt;">${doc.cliente.razon_social||'—'}${doc.cliente.rut ? ` · RUT: ${doc.cliente.rut}` : ''}</div>
-        ${doc.cliente.direccion ? `<div style="font-size:9pt;color:#444;margin-top:2px;">${doc.cliente.direccion}</div>` : ''}
-        ${doc.cliente.email     ? `<div style="font-size:9pt;color:#444;">${doc.cliente.email}</div>` : ''}
+      ${(esOC ? doc.proveedor : doc.cliente) ? `
+        <div style="font-size:7pt;font-weight:700;text-transform:uppercase;color:#555;margin-bottom:3px;letter-spacing:.5px;">${destLabel}</div>
+        <div style="font-weight:700;font-size:10pt;">${destNombre}${destRut ? ` · RUT: ${destRut}` : ''}</div>
+        ${destDir   ? `<div style="font-size:9pt;color:#444;margin-top:2px;">${destDir}</div>` : ''}
+        ${destEmail ? `<div style="font-size:9pt;color:#444;">${destEmail}</div>`              : ''}
       ` : ''}
     </div>
     <div style="text-align:right;font-size:9pt;color:#444;line-height:1.8;">
@@ -838,18 +986,28 @@ function generarHTMLDoc(doc) {
 async function guardarDocumento() {
   const tipo = document.getElementById('doc-tipo')?.value;
   if (!tipo) { showMessage('Selecciona el tipo de documento','error'); return; }
-  const clienteId = parseInt(document.getElementById('doc-cliente')?.value);
-  if (!clienteId) { showMessage('Selecciona un cliente','error'); return; }
-  const cliente = App.clients.find(c => c.id === clienteId);
+
+  let cliente = null, proveedor = null;
+  if (tipo === 'orden_compra') {
+    const provId = parseInt(document.getElementById('doc-proveedor')?.value);
+    if (!provId) { showMessage('Selecciona un proveedor','error'); return; }
+    proveedor = App.providers.find(p => p.id === provId);
+  } else {
+    const clienteId = parseInt(document.getElementById('doc-cliente')?.value);
+    if (!clienteId) { showMessage('Selecciona un cliente','error'); return; }
+    cliente = App.clients.find(c => c.id === clienteId);
+  }
+
   const lineas  = getLineas();
   if (!lineas.length) { showMessage('Agrega al menos un producto o servicio','error'); return; }
   const subtotal    = lineas.reduce((s,l)=>s+l.subtotal,0);
   const iva         = subtotal * 0.19;
   const total       = subtotal + iva;
-  const enviarEmail = document.getElementById('doc-enviar-email')?.checked || false;
+  const enviarEmail = (tipo !== 'orden_compra') && (document.getElementById('doc-enviar-email')?.checked || false);
   const payload = {
     tipo,
     cliente,
+    proveedor,
     fecha:   document.getElementById('doc-fecha')?.value,
     validez: parseInt(document.getElementById('doc-validez')?.value) || 30,
     notas:   document.getElementById('doc-notas')?.value || '',
@@ -1105,6 +1263,12 @@ function guardarConfiguracion() {
     mostrarEmpresa:   g('cfg-mostrar-empresa')?.checked,
   };
   try { localStorage.setItem('cotifacil_config', JSON.stringify(App.config)); } catch(e) {}
+  // Guardar config en servidor (persiste entre dispositivos)
+  fetch('/api/user/config', {
+    method: 'PUT',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(App.config)
+  }).catch(e => console.warn('Config server save failed:', e));
   aplicarConfig();
   hideModal('config-modal');
   showMessage('Configuración guardada','success');
@@ -1229,8 +1393,129 @@ function showError(tbodyId, msg, cols=6) {
   if (el) el.innerHTML = `<tr><td colspan="${cols}" class="empty-table-message" style="color:#f87171;"><i class="fas fa-exclamation-circle" style="margin-right:.5rem;"></i>${msg}</td></tr>`;
 }
 
+// ── Proveedores ──────────────────────────────────────────────────
+async function loadProviders() {
+  try {
+    const res = await fetch('/api/providers');
+    App.providers = await res.json();
+  } catch(e) { console.error('Error cargando proveedores', e); }
+}
+
+function crearProveedor() {
+  ['prov-nombre','prov-rut','prov-contacto','prov-email','prov-telefono','prov-direccion','prov-nota'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  document.getElementById('prov-id').value = '';
+  const t = document.getElementById('prov-modal-title');
+  if (t) t.textContent = 'Nuevo Proveedor';
+  showModal('proveedor-modal');
+}
+
+async function editarProveedor(id) {
+  const p = App.providers.find(x => x.id === id);
+  if (!p) return;
+  const set = (elId, val) => { const el=document.getElementById(elId); if(el) el.value=val||''; };
+  set('prov-id', id);
+  set('prov-nombre',    p.nombre||p.razon_social||'');
+  set('prov-rut',       p.rut);
+  set('prov-contacto',  p.contacto);
+  set('prov-email',     p.email);
+  set('prov-telefono',  p.telefono);
+  set('prov-direccion', p.direccion);
+  set('prov-nota',      p.nota);
+  const t = document.getElementById('prov-modal-title');
+  if (t) t.textContent = 'Editar Proveedor';
+  showModal('proveedor-modal');
+}
+
+async function guardarProveedor() {
+  const idVal = document.getElementById('prov-id')?.value;
+  const nombre = document.getElementById('prov-nombre')?.value.trim();
+  if (!nombre) { showMessage('El nombre del proveedor es obligatorio','error'); return; }
+  const payload = {
+    nombre:    nombre,
+    rut:       document.getElementById('prov-rut')?.value.trim(),
+    contacto:  document.getElementById('prov-contacto')?.value.trim(),
+    email:     document.getElementById('prov-email')?.value.trim(),
+    telefono:  document.getElementById('prov-telefono')?.value.trim(),
+    direccion: document.getElementById('prov-direccion')?.value.trim(),
+    nota:      document.getElementById('prov-nota')?.value.trim(),
+  };
+  try {
+    const method = idVal ? 'PUT' : 'POST';
+    const url    = idVal ? `/api/providers/${idVal}` : '/api/providers';
+    const res    = await fetch(url, { method, headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+    const data   = await res.json();
+    if (data.success) {
+      hideModal('proveedor-modal');
+      showMessage(idVal ? 'Proveedor actualizado':'Proveedor creado','success');
+      const res2 = await fetch('/api/providers');
+      App.providers = await res2.json();
+      if (document.getElementById('proveedores-page')?.classList.contains('active') ||
+          document.getElementById('proveedores-table-body')) {
+        renderProviders(App.providers);
+      }
+    } else { showMessage(data.error||'Error al guardar','error'); }
+  } catch { showMessage('Error de conexión','error'); }
+}
+
+async function eliminarProveedor(id) {
+  if (!confirm('¿Eliminar este proveedor?')) return;
+  try {
+    const res  = await fetch(`/api/providers/${id}`, { method:'DELETE' });
+    const data = await res.json();
+    if (data.success) {
+      App.providers = App.providers.filter(p => p.id !== id);
+      showMessage('Proveedor eliminado','success');
+      renderProviders(App.providers);
+    } else { showMessage(data.error||'Error','error'); }
+  } catch { showMessage('Error de conexión','error'); }
+}
+
+function renderProviders(list) {
+  const tbody = document.getElementById('proveedores-table-body');
+  if (!tbody) return;
+  if (!list.length) {
+    tbody.innerHTML = `<tr><td colspan="6" class="empty-table-message">No hay proveedores registrados</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = list.map(p => `
+    <tr>
+      <td style="font-weight:500;">${p.nombre||p.razon_social||'—'}</td>
+      <td>${p.rut||'—'}</td>
+      <td>${p.email||'—'}</td>
+      <td>${p.telefono||'—'}</td>
+      <td>${p.ordenes||0}</td>
+      <td>
+        <div class="flex gap-2">
+          <button onclick="editarProveedor(${p.id})"   style="color:#fbbf24;background:none;border:none;cursor:pointer;padding:.3rem;" title="Editar"><i class="fas fa-edit"></i></button>
+          <button onclick="eliminarProveedor(${p.id})" style="color:#f87171;background:none;border:none;cursor:pointer;padding:.3rem;" title="Eliminar"><i class="fas fa-trash"></i></button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+async function loadProveedoresPage() {
+  if (App.providers.length === 0) {
+    try {
+      const res = await fetch('/api/providers');
+      App.providers = await res.json();
+    } catch(e) {}
+  }
+  renderProviders(App.providers);
+}
+
 // ── Exponer funciones al scope global (necesario para onclick inline) ──
 window.crearCliente            = crearCliente;
+window.crearProveedor          = crearProveedor;
+window.editarProveedor         = editarProveedor;
+window.eliminarProveedor       = eliminarProveedor;
+window.guardarProveedor        = guardarProveedor;
+window.popularSelectProveedores= popularSelectProveedores;
+window.onProveedorChange       = onProveedorChange;
+window.cambiarEstadoDoc        = cambiarEstadoDoc;
+window.confirmarCambiarEstado  = confirmarCambiarEstado;
+window.convertirAFactura       = convertirAFactura;
 window.editarCliente           = editarCliente;
 window.eliminarCliente         = eliminarCliente;
 window.exportarClientes        = exportarClientes;
