@@ -92,17 +92,27 @@ if DATABASE_URL:
         finally:
             cur.close(); put_conn(conn)
 
-    def create_user(email, password, name, role='user'):
+    def create_user(email, password, name, role='user', verified=True):
         conn = get_conn()
         try:
             cur = conn.cursor()
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS verified BOOLEAN DEFAULT TRUE")
             cur.execute(
-                "INSERT INTO users (email, password, name, role) VALUES (%s,%s,%s,%s) RETURNING id",
-                (email.lower(), password, name, role)
+                "INSERT INTO users (email, password, name, role, verified) VALUES (%s,%s,%s,%s,%s) RETURNING id",
+                (email.lower(), password, name, role, verified)
             )
             uid = cur.fetchone()[0]
             conn.commit()
             return uid
+        finally:
+            cur.close(); put_conn(conn)
+
+    def mark_user_verified(uid):
+        conn = get_conn()
+        try:
+            cur = conn.cursor()
+            cur.execute("UPDATE users SET verified=TRUE WHERE id=%s", (uid,))
+            conn.commit()
         finally:
             cur.close(); put_conn(conn)
 
@@ -215,14 +225,21 @@ else:
     def find_user_by_id(uid):
         return next((u for u in _load().get('users',[]) if u['id']==uid), None)
 
-    def create_user(email, password, name, role='user'):
+    def create_user(email, password, name, role='user', verified=True):
         db = _load()
         uid = max((u['id'] for u in db['users']), default=0) + 1
-        db['users'].append({"id":uid,"email":email.lower(),"password":password,"name":name,"role":role})
+        db['users'].append({"id":uid,"email":email.lower(),"password":password,"name":name,"role":role,"verified":verified})
         if 'user_data' not in db: db['user_data'] = {}
         db['user_data'][str(uid)] = {"clients":[],"products":[],"documents":[]}
         _save(db)
         return uid
+
+    def mark_user_verified(uid):
+        db = _load()
+        for i, u in enumerate(db['users']):
+            if u['id'] == uid:
+                db['users'][i]['verified'] = True; break
+        _save(db)
 
     def update_user(uid, fields):
         db = _load()
@@ -254,6 +271,52 @@ else:
 
 # ── Flask app ─────────────────────────────────────────────────────
 app = Flask(__name__)
+
+# ── Tokens de verificación de email ──────────────────────────────
+import threading as _threading, time as _time
+_verification_tokens = {}
+_tokens_lock = _threading.Lock()
+
+def crear_token_verificacion(uid, email, name):
+    token = secrets.token_urlsafe(32)
+    with _tokens_lock:
+        _verification_tokens[token] = {
+            'uid': uid, 'email': email, 'name': name,
+            'expires': _time.time() + 3600
+        }
+    return token
+
+def consumir_token(token):
+    with _tokens_lock:
+        data = _verification_tokens.get(token)
+        if not data:
+            return None, 'Enlace inválido o ya utilizado.'
+        if _time.time() > data['expires']:
+            del _verification_tokens[token]
+            return None, 'El enlace expiró (1 hora). Regístrate nuevamente.'
+        del _verification_tokens[token]
+        return data, None
+
+def html_email_verificacion(nombre, link):
+    return f'''<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;background:#0d1117;color:#e2e8f0;border-radius:12px;overflow:hidden;">
+      <div style="background:linear-gradient(135deg,#1d4ed8,#3b82f6);padding:2rem;text-align:center;">
+        <h1 style="margin:0;font-size:1.5rem;color:white;">CotiFácil</h1>
+        <p style="margin:.5rem 0 0;color:rgba(255,255,255,.8);font-size:.9rem;">Confirma tu cuenta</p>
+      </div>
+      <div style="padding:2rem;">
+        <p style="font-size:1rem;margin-bottom:1rem;">Hola <strong>{nombre}</strong>,</p>
+        <p style="color:#94a3b8;margin-bottom:2rem;line-height:1.6;">
+          Gracias por registrarte en CotiFácil. Haz clic en el botón para confirmar tu dirección de correo y activar tu cuenta.
+        </p>
+        <div style="text-align:center;margin-bottom:2rem;">
+          <a href="{link}" style="display:inline-block;padding:.85rem 2rem;background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:white;text-decoration:none;border-radius:10px;font-weight:600;">
+            ✅ Confirmar mi cuenta
+          </a>
+        </div>
+        <p style="font-size:.8rem;color:#475569;text-align:center;">Este enlace expira en 1 hora.</p>
+      </div>
+    </div>'''
+
 app.secret_key = os.environ.get('SECRET_KEY', 'cotifacil_secret_key_2024')
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
@@ -295,21 +358,30 @@ ESTADO_INICIAL = {
 
 # ── Email ─────────────────────────────────────────────────────────
 def send_email_smtp(to_email, subject, html_body):
-    smtp_host = os.environ.get('SMTP_HOST','')
+    smtp_host = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
     smtp_port = int(os.environ.get('SMTP_PORT', 587))
-    smtp_user = os.environ.get('SMTP_USER','')
-    smtp_pass = os.environ.get('SMTP_PASS','')
-    if not smtp_host or not smtp_user: return False
+    smtp_user = os.environ.get('SMTP_USER', '')
+    smtp_pass = os.environ.get('SMTP_PASS', '')
+    if not smtp_user or not smtp_pass:
+        print('[Email] Faltan SMTP_USER o SMTP_PASS')
+        return False
     try:
         msg = MIMEMultipart('alternative')
-        msg['Subject'] = subject; msg['From'] = smtp_user; msg['To'] = to_email
+        msg['Subject'] = subject
+        msg['From']    = f'CotiFácil <{smtp_user}>'
+        msg['To']      = to_email
         msg.attach(MIMEText(html_body, 'html', 'utf-8'))
-        with smtplib.SMTP(smtp_host, smtp_port) as server:
-            server.ehlo(); server.starttls(); server.login(smtp_user, smtp_pass)
+        with smtplib.SMTP(smtp_host, smtp_port, timeout=15) as server:
+            server.ehlo()
+            server.starttls()
+            server.ehlo()
+            server.login(smtp_user, smtp_pass)
             server.sendmail(smtp_user, to_email, msg.as_string())
+        print(f'[Email] Enviado OK → {to_email}')
         return True
     except Exception as e:
-        print(f"[Email error] {e}"); return False
+        print(f'[Email error] {type(e).__name__}: {e}')
+        return False
 
 def generar_html_documento(doc):
     tipo_labels = {'cotizacion':'COTIZACIÓN','orden_compra':'ORDEN DE COMPRA','factura':'FACTURA'}
@@ -393,13 +465,53 @@ def register():
             return jsonify({"success":False,"message":"Las contraseñas no coinciden"}), 400
         if find_user_by_email(email):
             return jsonify({"success":False,"message":"Este correo ya está registrado"}), 400
-        uid = create_user(email, hash_password(pwd), name)
-        session['user_id']    = uid
-        session['user_name']  = name
-        session['user_email'] = email
-        return jsonify({"success":True,"user":{"name":name,"email":email}})
+
+        # Crear usuario como no verificado
+        uid   = create_user(email, hash_password(pwd), name, verified=False)
+        token = crear_token_verificacion(uid, email, name)
+        link  = f"{request.host_url.rstrip('/')}/verify-email/{token}"
+        html  = html_email_verificacion(name, link)
+        email_ok = send_email_smtp(email, 'Confirma tu cuenta en CotiFácil ✅', html)
+
+        if email_ok:
+            return jsonify({"success":True, "pending_verification":True,
+                "message":f"Te enviamos un correo de confirmación a {email}. Revisa tu bandeja de entrada (y la carpeta de spam)."})
+        else:
+            # Si SMTP falla, activar cuenta directamente para no bloquear al usuario
+            mark_user_verified(uid)
+            session['user_id']    = uid
+            session['user_name']  = name
+            session['user_email'] = email
+            return jsonify({"success":True,"user":{"name":name,"email":email}})
     except Exception as e:
         return jsonify({"success":False,"message":str(e)}), 500
+
+@app.route('/verify-email/<token>')
+def verify_email(token):
+    data, error = consumir_token(token)
+    if error:
+        return render_template('verify_result.html', success=False, message=error)
+    mark_user_verified(data['uid'])
+    session['user_id']    = data['uid']
+    session['user_name']  = data['name']
+    session['user_email'] = data['email']
+    return render_template('verify_result.html', success=True,
+        message=f"¡Bienvenido, {data['name']}! Tu cuenta está activa.")
+
+@app.route('/api/email/test', methods=['POST'])
+@login_required
+def api_test_email():
+    uid  = session['user_id']
+    user = find_user_by_id(uid)
+    if not user: return jsonify({"success":False}), 400
+    html = f'''<div style="font-family:Arial;padding:2rem;background:#0d1117;color:#e2e8f0;border-radius:12px;">
+      <h2 style="color:#3b82f6;">✅ Prueba de email exitosa</h2>
+      <p>Hola <strong>{user["name"]}</strong>, el SMTP de CotiFácil está funcionando correctamente.</p>
+      <p style="color:#64748b;font-size:.85rem;margin-top:1rem;">Este es un mensaje de prueba generado desde la configuración.</p>
+    </div>'''
+    ok = send_email_smtp(user['email'], 'CotiFácil — Prueba de email ✓', html)
+    return jsonify({"success": ok, "to": user['email'],
+        "message": f"Email enviado a {user['email']}" if ok else "Error al enviar. Revisa los logs de Render → Logs."})
 
 @app.route('/logout')
 def logout():

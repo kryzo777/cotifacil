@@ -1393,6 +1393,45 @@ function showError(tbodyId, msg, cols=6) {
   if (el) el.innerHTML = `<tr><td colspan="${cols}" class="empty-table-message" style="color:#f87171;"><i class="fas fa-exclamation-circle" style="margin-right:.5rem;"></i>${msg}</td></tr>`;
 }
 
+// ── Test Email ───────────────────────────────────────────────────
+async function testearEmail() {
+  const btn = document.getElementById('btn-test-email');
+  const res_el = document.getElementById('email-test-result');
+  if (!btn) return;
+  const orig = btn.innerHTML;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+  btn.disabled = true;
+  if (res_el) res_el.style.display = 'none';
+  try {
+    const res  = await fetch('/api/email/test', { method: 'POST' });
+    const data = await res.json();
+    if (res_el) {
+      res_el.style.display = 'block';
+      if (data.success) {
+        res_el.style.background = 'rgba(16,185,129,.12)';
+        res_el.style.color      = '#6ee7b7';
+        res_el.style.border     = '1px solid rgba(16,185,129,.25)';
+        res_el.innerHTML = `<i class="fas fa-check-circle"></i> ${data.message}`;
+      } else {
+        res_el.style.background = 'rgba(239,68,68,.12)';
+        res_el.style.color      = '#fca5a5';
+        res_el.style.border     = '1px solid rgba(239,68,68,.25)';
+        res_el.innerHTML = `<i class="fas fa-times-circle"></i> ${data.message}`;
+      }
+    }
+  } catch (e) {
+    if (res_el) {
+      res_el.style.display = 'block';
+      res_el.style.background = 'rgba(239,68,68,.12)';
+      res_el.style.color = '#fca5a5';
+      res_el.innerHTML = '<i class="fas fa-times-circle"></i> Error de conexión';
+    }
+  } finally {
+    btn.innerHTML = orig;
+    btn.disabled  = false;
+  }
+}
+
 // ── Proveedores ──────────────────────────────────────────────────
 async function loadProviders() {
   try {
@@ -1506,6 +1545,7 @@ async function loadProveedoresPage() {
 }
 
 // ── Exponer funciones al scope global (necesario para onclick inline) ──
+window.testearEmail            = testearEmail;
 window.crearCliente            = crearCliente;
 window.crearProveedor          = crearProveedor;
 window.editarProveedor         = editarProveedor;

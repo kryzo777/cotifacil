@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #080c14; font-family: 'DM Sans', sans-serif; }
+  .verify-root {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    background: #080c14;
+  }
+  .verify-card {
+    background: #0d1117;
+    border: 1px solid rgba(255,255,255,.07);
+    border-radius: 16px;
+    padding: 3rem 2.5rem;
+    text-align: center;
+    max-width: 440px;
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+  }
+  .verify-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, {% if success %}rgba(16,185,129,.6){% else %}rgba(239,68,68,.6){% endif %}, transparent);
+  }
+  .verify-icon {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    margin: 0 auto 1.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    {% if success %}
+    background: rgba(16,185,129,.12);
+    color: #10b981;
+    box-shadow: 0 0 40px rgba(16,185,129,.2);
+    {% else %}
+    background: rgba(239,68,68,.12);
+    color: #ef4444;
+    box-shadow: 0 0 40px rgba(239,68,68,.2);
+    {% endif %}
+  }
+  .verify-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #f1f5f9;
+    margin-bottom: .75rem;
+    letter-spacing: -.02em;
+  }
+  .verify-msg {
+    color: #64748b;
+    font-size: .95rem;
+    line-height: 1.6;
+    margin-bottom: 2rem;
+  }
+  .btn-go {
+    display: inline-block;
+    padding: .85rem 2rem;
+    background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+    color: white;
+    text-decoration: none;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: .95rem;
+    transition: all .2s;
+    box-shadow: 0 4px 20px rgba(37,99,235,.35);
+  }
+  .btn-go:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(37,99,235,.45); }
+  .logo-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .6rem;
+    margin-bottom: 2.5rem;
+  }
+  .logo-icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    background: linear-gradient(135deg,#1d4ed8,#3b82f6);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .logo-icon i { color: white; font-size: .95rem; }
+  .logo-text { font-family:'Syne',sans-serif; font-size:1.2rem; font-weight:700; color:#f1f5f9; }
+</style>
+
+<div class="verify-root">
+  <div class="verify-card">
+    <div class="logo-wrap">
+      <div class="logo-icon"><i class="fas fa-file-invoice"></i></div>
+      <span class="logo-text">CotiFácil</span>
+    </div>
+
+    <div class="verify-icon">
+      {% if success %}
+        <i class="fas fa-check"></i>
+      {% else %}
+        <i class="fas fa-times"></i>
+      {% endif %}
+    </div>
+
+    <h1 class="verify-title">
+      {% if success %}¡Cuenta confirmada!{% else %}Enlace inválido{% endif %}
+    </h1>
+    <p class="verify-msg">{{ message }}</p>
+
+    {% if success %}
+      <a href="/" class="btn-go"><i class="fas fa-arrow-right"></i> Ir a CotiFácil</a>
+    {% else %}
+      <a href="/register" class="btn-go"><i class="fas fa-user-plus"></i> Crear cuenta nueva</a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
