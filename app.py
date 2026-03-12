@@ -1027,8 +1027,18 @@ def api_stats():
     except Exception as e:
         return jsonify({"success":False,"error":str(e)}), 500
 
-init_db()
-_init_tokens_table()
+# Iniciar DB en background para no bloquear el arranque del servidor
+import threading
+
+def _init_db_background():
+    try:
+        init_db()
+        _init_tokens_table()
+        print('[CotiFácil] DB lista')
+    except Exception as e:
+        print(f'[CotiFácil] DB init error: {e}')
+
+threading.Thread(target=_init_db_background, daemon=True).start()
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
