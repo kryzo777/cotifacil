@@ -272,29 +272,80 @@ else:
 # ── Flask app ─────────────────────────────────────────────────────
 app = Flask(__name__)
 
-# ── Tokens de verificación de email ──────────────────────────────
-import threading as _threading, time as _time
-_verification_tokens = {}
-_tokens_lock = _threading.Lock()
+# ── Tokens de verificación de email (persistidos en DB) ──────────
+import time as _time
+
+def _init_tokens_table():
+    """Crea tabla de tokens si no existe (solo PostgreSQL)."""
+    if not DATABASE_URL:
+        return
+    try:
+        conn = get_conn()
+        cur  = conn.cursor()
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS verification_tokens (
+                token TEXT PRIMARY KEY,
+                uid   INTEGER,
+                email TEXT,
+                name  TEXT,
+                expires DOUBLE PRECISION
+            )
+        ''')
+        conn.commit()
+        cur.close(); put_conn(conn)
+    except: pass
 
 def crear_token_verificacion(uid, email, name):
-    token = secrets.token_urlsafe(32)
-    with _tokens_lock:
-        _verification_tokens[token] = {
-            'uid': uid, 'email': email, 'name': name,
-            'expires': _time.time() + 3600
-        }
+    token   = secrets.token_urlsafe(32)
+    expires = _time.time() + 3600
+    if DATABASE_URL:
+        try:
+            conn = get_conn()
+            cur  = conn.cursor()
+            cur.execute(
+                "INSERT INTO verification_tokens (token,uid,email,name,expires) VALUES (%s,%s,%s,%s,%s)",
+                (token, uid, email, name, expires)
+            )
+            conn.commit(); cur.close(); put_conn(conn)
+        except Exception as e:
+            print(f'[Token] Error guardando token: {e}')
+    else:
+        # Fallback JSON: guardar en DB
+        import json as _j
+        db = _load()
+        if 'tokens' not in db: db['tokens'] = {}
+        db['tokens'][token] = {'uid':uid,'email':email,'name':name,'expires':expires}
+        _save(db)
     return token
 
 def consumir_token(token):
-    with _tokens_lock:
-        data = _verification_tokens.get(token)
+    if DATABASE_URL:
+        try:
+            conn = get_conn()
+            cur  = conn.cursor()
+            cur.execute("SELECT uid,email,name,expires FROM verification_tokens WHERE token=%s", (token,))
+            row = cur.fetchone()
+            if not row:
+                cur.close(); put_conn(conn)
+                return None, 'Enlace inválido o ya utilizado.'
+            uid, email, name, expires = row
+            cur.execute("DELETE FROM verification_tokens WHERE token=%s", (token,))
+            conn.commit(); cur.close(); put_conn(conn)
+            if _time.time() > expires:
+                return None, 'El enlace expiró (1 hora). Regístrate nuevamente.'
+            return {'uid':uid,'email':email,'name':name}, None
+        except Exception as e:
+            return None, f'Error interno: {e}'
+    else:
+        db = _load()
+        tokens = db.get('tokens', {})
+        data   = tokens.get(token)
         if not data:
             return None, 'Enlace inválido o ya utilizado.'
         if _time.time() > data['expires']:
-            del _verification_tokens[token]
+            tokens.pop(token, None); db['tokens'] = tokens; _save(db)
             return None, 'El enlace expiró (1 hora). Regístrate nuevamente.'
-        del _verification_tokens[token]
+        tokens.pop(token, None); db['tokens'] = tokens; _save(db)
         return data, None
 
 def html_email_verificacion(nombre, link):
@@ -361,7 +412,8 @@ def send_email_smtp(to_email, subject, html_body):
     smtp_host = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
     smtp_port = int(os.environ.get('SMTP_PORT', 587))
     smtp_user = os.environ.get('SMTP_USER', '')
-    smtp_pass = os.environ.get('SMTP_PASS', '')
+    smtp_pass = os.environ.get('SMTP_PASS', '').replace(' ', '')  # Gmail app passwords tienen espacios
+    smtp_user = smtp_user.strip()
     if not smtp_user or not smtp_pass:
         print('[Email] Faltan SMTP_USER o SMTP_PASS')
         return False
@@ -976,6 +1028,7 @@ def api_stats():
         return jsonify({"success":False,"error":str(e)}), 500
 
 init_db()
+_init_tokens_table()
 
 if __name__ == '__main__':
     app.run(debug=True)

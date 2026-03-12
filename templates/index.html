@@ -477,8 +477,41 @@ textarea.modal-input{resize:vertical;min-height:70px}
           </div>
         </div>
 
-        <!-- Modal editar documento -->
-        <!-- Modal Cambiar Estado -->
+      <!-- PROVEEDORES PAGE -->
+      <div id="proveedores-page" class="page-content hidden">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-xl font-semibold">Proveedores</h2>
+          <button class="btn-primary" onclick="crearProveedor()"><i class="fas fa-plus"></i> Nuevo Proveedor</button>
+        </div>
+        <div class="card">
+          <div class="table-container">
+            <table>
+              <thead><tr>
+                <th>Nombre / Razón Social</th>
+                <th>RUT</th>
+                <th>Email</th>
+                <th>Teléfono</th>
+                <th>Órdenes</th>
+                <th>Acciones</th>
+              </tr></thead>
+              <tbody id="proveedores-table-body">
+                <tr><td colspan="6" class="empty-table-message">Cargando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="reportes-page" class="page-content hidden">
+        <div id="reportes-content"><p class="text-gray-400">Cargando reportes...</p></div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+
+<!-- Modal Cambiar Estado -->
         <div id="cambiar-estado-modal" class="modal">
           <div class="modal-backdrop" onclick="hideModal('cambiar-estado-modal')"></div>
           <div class="modal-content">
@@ -542,40 +575,6 @@ textarea.modal-input{resize:vertical;min-height:70px}
               </div>
             </div>
           </div>
-        </div>
-
-      <!-- PROVEEDORES PAGE -->
-      <div id="proveedores-page" class="page-content hidden">
-        <div class="flex justify-between items-center mb-4">
-          <h2 class="text-xl font-semibold">Proveedores</h2>
-          <button class="btn-primary" onclick="crearProveedor()"><i class="fas fa-plus"></i> Nuevo Proveedor</button>
-        </div>
-        <div class="card">
-          <div class="table-container">
-            <table>
-              <thead><tr>
-                <th>Nombre / Razón Social</th>
-                <th>RUT</th>
-                <th>Email</th>
-                <th>Teléfono</th>
-                <th>Órdenes</th>
-                <th>Acciones</th>
-              </tr></thead>
-              <tbody id="proveedores-table-body">
-                <tr><td colspan="6" class="empty-table-message">Cargando...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <div id="reportes-page" class="page-content hidden">
-        <div id="reportes-content"><p class="text-gray-400">Cargando reportes...</p></div>
-      </div>
-
-    </div>
-  </main>
-</div>
 
 <!-- MODAL PERFIL -->
 <div id="perfil-modal" class="modal">
