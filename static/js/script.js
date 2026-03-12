@@ -1,41 +1,25 @@
-/* ================================================================
-   CotiFácil — script.js  (versión completa con todas las mejoras)
-   ================================================================ */
+/* =====================================================
+   CotiFácil — script.js  (versión completa)
+   ===================================================== */
 
-if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+// Salir limpiamente si estamos en login
+if (window.location.pathname === '/login') {
+  // no ejecutar nada más
+} else {
 
-// ── Estado global ─────────────────────────────────────────────────
+// ── Estado global ──────────────────────────────────────
 const App = {
   currentPage: 'dashboard',
-  clients:     [],
-  products:    [],
-  documents:   [],
-  providers:   [],
-  user:        null,
-  config:      {},
+  clients: [],
+  products: [],
+  documents: [],
+  user: null,
+  config: {},
   csvClientes: [],
-  csvProductos:[],
-  docViendoId: null,
+  csvProductos: [],
 };
 
-// ── Constantes de estados por tipo ────────────────────────────────
-const ESTADOS = {
-  cotizacion:   ['borrador','enviada','aceptada','rechazada','vencida'],
-  factura:      ['pendiente','enviada','pagada','anulada'],
-  orden_compra: ['borrador','enviada','recibida','cancelada'],
-};
-const ESTADO_LABEL = {
-  borrador:'Borrador', enviada:'Enviada', aceptada:'Aceptada', rechazada:'Rechazada',
-  vencida:'Vencida',  pendiente:'Pendiente', pagada:'Pagada', anulada:'Anulada',
-  recibida:'Recibida', cancelada:'Cancelada',
-};
-const ESTADO_COLOR = {
-  borrador:'#64748b', enviada:'#3b82f6', aceptada:'#10b981', rechazada:'#ef4444',
-  vencida:'#f59e0b',  pendiente:'#f59e0b', pagada:'#10b981',  anulada:'#ef4444',
-  recibida:'#10b981', cancelada:'#ef4444',
-};
-
-// ── Init ──────────────────────────────────────────────────────────
+// ── Init ──────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
   cargarConfig();
   await loadUser();
@@ -44,66 +28,73 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupForms();
   setupSearch();
   setupDropdownClose();
-  const hash = window.location.hash.replace('#','') || 'dashboard';
+  const hash = window.location.hash.replace('#', '') || 'dashboard';
   navigateTo(hash);
 });
 
-// ── Config (localStorage) ─────────────────────────────────────────
+// ── Configuración (localStorage) ─────────────────────
 function cargarConfig() {
   try {
     const saved = localStorage.getItem('cotifacil_config');
-    if (saved) { App.config = JSON.parse(saved); aplicarConfig(); }
+    if (saved) {
+      App.config = JSON.parse(saved);
+      aplicarConfig();
+    }
   } catch(e) {}
 }
 
 function aplicarConfig() {
   const cfg = App.config;
-  if (cfg.color) document.documentElement.style.setProperty('--primary-color', cfg.color);
+  if (cfg.color) {
+    document.documentElement.style.setProperty('--primary-color', cfg.color);
+    document.querySelectorAll('.btn-primary, .nav-link.active, .sidebar-logo').forEach(el => {
+      if (el.classList.contains('btn-primary')) el.style.background = cfg.color;
+    });
+  }
   if (cfg.appNombre) {
     const t = document.getElementById('app-title');
     if (t) t.textContent = cfg.appNombre;
   }
 }
 
-// ── Usuario ───────────────────────────────────────────────────────
+// ── Usuario ───────────────────────────────────────────
 async function loadUser() {
   try {
     const res = await fetch('/api/user');
     if (res.ok) {
       App.user = await res.json();
-      const initials = (App.user.name || 'U').charAt(0).toUpperCase();
-      const hav = document.getElementById('header-avatar-initials');
-      const hu  = document.getElementById('header-username');
-      if (hav) hav.textContent = initials;
-      if (hu)  hu.textContent  = (App.user.name||'Usuario').split(' ')[0];
       const info = document.getElementById('user-info');
       if (info) {
-        const n = info.querySelector('.user-name');
-        const e = info.querySelector('.user-email');
-        if (n) n.textContent = App.user.name  || 'Usuario';
-        if (e) e.textContent = App.user.email || '';
+        info.querySelector('.user-name').textContent = App.user.name || 'Usuario';
+        info.querySelector('.user-email').textContent = App.user.email || '';
       }
-      // Cargar config del servidor
-      try {
-        const cfgRes  = await fetch('/api/user/config');
-        const cfgData = await cfgRes.json();
-        if (cfgData && !cfgData.error) {
-          App.config = { ...App.config, ...cfgData };
-          aplicarConfig();
-        }
-      } catch(e) {}
-    } else { window.location.href = '/login'; }
-  } catch { window.location.href = '/login'; }
+      const initials = (App.user.name || 'U').charAt(0).toUpperCase();
+      const headerAv = document.getElementById('header-avatar-initials');
+      const perfilAv = document.getElementById('perfil-avatar');
+      if (headerAv) headerAv.textContent = initials;
+      if (perfilAv) perfilAv.textContent = initials;
+      const headerUser = document.getElementById('header-username');
+      if (headerUser) headerUser.textContent = (App.user.name || 'Usuario').split(' ')[0];
+    } else {
+      window.location.href = '/login';
+    }
+  } catch {
+    window.location.href = '/login';
+  }
 }
 
-// ── Logout ────────────────────────────────────────────────────────
+// ── Logout ────────────────────────────────────────────
 function setupLogout() {
   const btn = document.getElementById('logout-btn');
   if (btn) btn.addEventListener('click', doLogout);
 }
-async function doLogout() { await fetch('/logout'); window.location.href = '/login'; }
 
-// ── Navegación ────────────────────────────────────────────────────
+async function doLogout() {
+  await fetch('/logout');
+  window.location.href = '/login';
+}
+
+// ── Navegación ────────────────────────────────────────
 function setupNavigation() {
   document.querySelectorAll('.nav-link[data-page]').forEach(link => {
     link.addEventListener('click', e => {
@@ -114,7 +105,7 @@ function setupNavigation() {
     });
   });
   window.addEventListener('hashchange', () => {
-    const page = window.location.hash.replace('#','') || 'dashboard';
+    const page = window.location.hash.replace('#', '') || 'dashboard';
     navigateTo(page);
   });
 }
@@ -124,27 +115,26 @@ function navigateTo(page) {
   document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
   const target = document.getElementById(`${page}-page`);
   if (target) { target.classList.remove('hidden'); target.classList.add('active'); }
-  const navLink = document.querySelector(`.nav-link[data-page="${page}"]`);
-  if (navLink) navLink.classList.add('active');
-  const titles = { dashboard:'Dashboard', clientes:'Clientes', productos:'Productos', documentos:'Documentos', 'crear-documento':'Crear Documento', proveedores:'Proveedores', reportes:'Reportes' };
+  const activeLink = document.querySelector(`.nav-link[data-page="${page}"]`);
+  if (activeLink) activeLink.classList.add('active');
+  const titles = { dashboard:'Dashboard', clientes:'Clientes', productos:'Productos', documentos:'Documentos', 'crear-documento':'Crear Documento', reportes:'Reportes' };
   const titleEl = document.querySelector('.page-title');
   if (titleEl) titleEl.textContent = titles[page] || page;
   App.currentPage = page;
   switch (page) {
-    case 'dashboard':       loadDashboard();      break;
-    case 'clientes':        loadClients();        break;
-    case 'productos':       loadProducts();       break;
-    case 'documentos':      loadDocuments();      break;
-    case 'crear-documento': initCrearDoc();       break;
-    case 'proveedores':     loadProveedoresPage(); break;
-    case 'reportes':        loadReportes();       break;
+    case 'dashboard':        loadDashboard(); break;
+    case 'clientes':         loadClients(); break;
+    case 'productos':        loadProducts(); break;
+    case 'documentos':       loadDocuments(); break;
+    case 'crear-documento':  initCrearDoc(); break;
+    case 'reportes':         loadReportes(); break;
   }
 }
 
-// ── Dashboard ─────────────────────────────────────────────────────
+// ── Dashboard ─────────────────────────────────────────
 async function loadDashboard() {
   try {
-    const res   = await fetch('/api/stats');
+    const res = await fetch('/api/stats');
     const stats = await res.json();
     setText('[data-stat="documents"]', stats.total_documents ?? 0);
     setText('[data-stat="clients"]',   stats.total_clients   ?? 0);
@@ -158,7 +148,7 @@ async function loadDashboard() {
 function renderRecentDocs(docs) {
   const c = document.getElementById('recent-docs');
   if (!c) return;
-  if (!docs.length) { c.innerHTML = '<p style="color:#64748b;font-size:.875rem;">No hay documentos aún.</p>'; return; }
+  if (!docs.length) { c.innerHTML = '<p class="text-gray-400 text-sm">No hay documentos aún.</p>'; return; }
   c.innerHTML = docs.map(d => `
     <div style="display:flex;align-items:center;justify-content:space-between;padding:.6rem 0;border-bottom:1px solid #1e2d3d;">
       <div>
@@ -177,13 +167,13 @@ function renderDocTypeSummary(stats) {
   const c = document.getElementById('doc-type-summary');
   if (!c) return;
   const tipos = [
-    { key:'cotizacion',   label:'Cotizaciones',      color:'#60a5fa' },
-    { key:'orden_compra', label:'Órdenes de Compra',  color:'#a78bfa' },
-    { key:'factura',      label:'Facturas',            color:'#34d399' },
+    { key:'cotizacion', label:'Cotizaciones', color:'#60a5fa' },
+    { key:'orden_compra', label:'Órdenes de Compra', color:'#a78bfa' },
+    { key:'factura', label:'Facturas', color:'#34d399' },
   ];
-  if (!Object.keys(stats).length) { c.innerHTML = '<p style="color:#64748b;font-size:.875rem;">No hay documentos aún.</p>'; return; }
+  if (!Object.keys(stats).length) { c.innerHTML = '<p class="text-gray-400 text-sm">No hay documentos aún.</p>'; return; }
   c.innerHTML = tipos.map(t => {
-    const s = stats[t.key] || { count:0, total:0 };
+    const s = stats[t.key] || { count: 0, total: 0 };
     return `<div style="display:flex;align-items:center;justify-content:space-between;padding:.6rem 0;border-bottom:1px solid #1e2d3d;">
       <div style="display:flex;align-items:center;gap:.6rem;">
         <div style="width:10px;height:10px;border-radius:50%;background:${t.color};flex-shrink:0;"></div>
@@ -197,11 +187,11 @@ function renderDocTypeSummary(stats) {
   }).join('');
 }
 
-// ── Clientes ──────────────────────────────────────────────────────
+// ── Clientes ──────────────────────────────────────────
 async function loadClients() {
   showLoading('clients-table-body', 8);
   try {
-    const res   = await fetch('/api/clients');
+    const res = await fetch('/api/clients');
     App.clients = await res.json();
     renderClients(App.clients);
   } catch { showError('clients-table-body', 'Error cargando clientes', 8); }
@@ -240,7 +230,7 @@ async function editarCliente(id) {
   const c = App.clients.find(x => x.id === id);
   if (!c) return;
   document.getElementById('cliente-modal-title').textContent = 'Editar Cliente';
-  document.getElementById('cliente-id').value   = c.id;
+  document.getElementById('cliente-id').value    = c.id;
   document.getElementById('rut').value           = c.rut||'';
   document.getElementById('razon-social').value  = c.razon_social||'';
   document.getElementById('direccion').value     = c.direccion||'';
@@ -255,24 +245,16 @@ async function editarCliente(id) {
 async function eliminarCliente(id) {
   if (!confirm('¿Eliminar este cliente?')) return;
   try {
-    const res  = await fetch(`/api/clients/${id}`, { method:'DELETE' });
+    const res = await fetch(`/api/clients/${id}`, { method: 'DELETE' });
     const data = await res.json();
-    if (data.success) { showMessage('Cliente eliminado','success'); loadClients(); }
-    else showMessage(data.error||'Error al eliminar','error');
-  } catch { showMessage('Error de conexión','error'); }
+    if (data.success) { showMessage('Cliente eliminado', 'success'); loadClients(); }
+  } catch { showMessage('Error al eliminar', 'error'); }
 }
 
 async function exportarClientes() { window.location.href = '/api/clients/export'; }
 
-// ── Import Clientes CSV ───────────────────────────────────────────
-function importarClientes() {
-  const preview = document.getElementById('csv-clientes-preview');
-  const input   = document.getElementById('csv-clientes-input');
-  if (preview) preview.style.display = 'none';
-  if (input)   input.value = '';
-  App.csvClientes = [];
-  showModal('import-clientes-modal');
-}
+// ── Import Clientes CSV ──────────────────────────────
+function importarClientes() { showModal('import-clientes-modal'); }
 
 function handleClientesCSV(input) {
   const file = input.files[0];
@@ -280,47 +262,37 @@ function handleClientesCSV(input) {
   const reader = new FileReader();
   reader.onload = e => {
     const lines = e.target.result.split('\n').filter(l => l.trim());
-    const rows  = lines.slice(1).map(l => l.split(',').map(v => v.trim().replace(/^"|"$/g,'')));
+    const rows = lines.slice(1).map(l => l.split(',').map(v => v.trim().replace(/^"|"$/g,'')));
     App.csvClientes = rows.filter(r => r.length >= 2 && r[0]);
-    const info    = document.getElementById('csv-clientes-info');
-    const preview = document.getElementById('csv-clientes-preview');
-    if (info)    info.textContent = `✓ ${App.csvClientes.length} clientes listos para importar`;
-    if (preview) preview.style.display = 'block';
+    document.getElementById('csv-clientes-info').textContent = `Se encontraron ${App.csvClientes.length} clientes para importar`;
+    document.getElementById('csv-clientes-preview').style.display = 'block';
   };
   reader.readAsText(file, 'UTF-8');
 }
 
 async function confirmarImportarClientes() {
+  if (!App.csvClientes.length) return;
   const input = document.getElementById('csv-clientes-input');
-  if (!input || !input.files[0]) { showMessage('Selecciona un archivo CSV primero','error'); return; }
-  if (!App.csvClientes.length)   { showMessage('El archivo no tiene datos válidos','error'); return; }
-  const btn = document.querySelector('#import-clientes-modal .btn-primary');
-  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importando...'; }
   const formData = new FormData();
   formData.append('file', input.files[0]);
   try {
-    const res  = await fetch('/api/clients/import', { method:'POST', body: formData });
+    const res = await fetch('/api/clients/import', { method: 'POST', body: formData });
     const data = await res.json();
     if (data.success) {
       hideModal('import-clientes-modal');
       showMessage(data.message || `${data.imported_count} clientes importados`, 'success');
-      const preview = document.getElementById('csv-clientes-preview');
-      if (preview) preview.style.display = 'none';
-      input.value     = '';
-      App.csvClientes = [];
-      await loadClients();
-    } else { showMessage(data.error || 'Error al importar','error'); }
-  } catch(e) { showMessage('Error de conexión: '+e.message,'error'); }
-  finally {
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-upload"></i> Importar'; }
-  }
+      document.getElementById('csv-clientes-preview').style.display = 'none';
+      input.value = '';
+      loadClients();
+    } else { showMessage(data.error || 'Error al importar', 'error'); }
+  } catch { showMessage('Error de conexión', 'error'); }
 }
 
-// ── Productos ─────────────────────────────────────────────────────
+// ── Productos ─────────────────────────────────────────
 async function loadProducts() {
   showLoading('products-table-body', 9);
   try {
-    const res    = await fetch('/api/products');
+    const res = await fetch('/api/products');
     App.products = await res.json();
     renderProducts(App.products);
     updateProductStats(App.products);
@@ -333,7 +305,7 @@ function renderProducts(list) {
   if (!list.length) { tbody.innerHTML = `<tr><td colspan="9" class="empty-table-message">No hay productos registrados</td></tr>`; return; }
   tbody.innerHTML = list.map(p => {
     const low = p.stock <= p.stock_minimo;
-    return `<tr class="${low?'stock-bajo':''}">
+    return `<tr class="${low ? 'stock-bajo' : ''}">
       <td>${p.sku||'—'}</td>
       <td style="font-weight:500;">${p.nombre||'—'}</td>
       <td>${p.categoria||'—'}</td>
@@ -341,7 +313,7 @@ function renderProducts(list) {
       <td>${formatCLP(p.precio||0)}</td>
       <td>${p.stock??0}</td>
       <td>${p.stock_minimo??0}</td>
-      <td><span class="badge ${low?'badge-rechazado':'badge-aprobado'}">${low?'Stock Bajo':'Normal'}</span></td>
+      <td><span class="badge ${low ? 'badge-rechazado' : 'badge-aprobado'}">${low?'Stock Bajo':'Normal'}</span></td>
       <td>
         <div class="flex gap-2">
           <button onclick="editarProducto(${p.id})" style="color:#60a5fa;background:none;border:none;cursor:pointer;padding:.25rem;" title="Editar"><i class="fas fa-edit"></i></button>
@@ -353,10 +325,10 @@ function renderProducts(list) {
 }
 
 function updateProductStats(list) {
-  setText('total-products',   list.length);
+  setText('total-products', list.length);
   setText('total-categories', new Set(list.map(p=>p.categoria).filter(Boolean)).size);
-  setText('total-value',      formatCLP(list.reduce((s,p)=>s+(p.precio||0)*(p.stock||0),0)));
-  setText('low-stock-count',  list.filter(p=>p.stock<=p.stock_minimo).length);
+  setText('total-value', formatCLP(list.reduce((s,p)=>s+(p.precio||0)*(p.stock||0),0)));
+  setText('low-stock-count', list.filter(p=>p.stock<=p.stock_minimo).length);
 }
 
 function crearProducto() {
@@ -385,22 +357,14 @@ async function editarProducto(id) {
 async function eliminarProducto(id) {
   if (!confirm('¿Eliminar este producto?')) return;
   try {
-    const res  = await fetch(`/api/products/${id}`, { method:'DELETE' });
+    const res = await fetch(`/api/products/${id}`, { method: 'DELETE' });
     const data = await res.json();
-    if (data.success) { showMessage('Producto eliminado','success'); loadProducts(); }
-    else showMessage(data.error||'Error al eliminar','error');
-  } catch { showMessage('Error de conexión','error'); }
+    if (data.success) { showMessage('Producto eliminado', 'success'); loadProducts(); }
+  } catch { showMessage('Error al eliminar', 'error'); }
 }
 
-// ── Import Productos CSV ──────────────────────────────────────────
-function importarProductos() {
-  const preview = document.getElementById('csv-productos-preview');
-  const input   = document.getElementById('csv-productos-input');
-  if (preview) preview.style.display = 'none';
-  if (input)   input.value = '';
-  App.csvProductos = [];
-  showModal('import-productos-modal');
-}
+// ── Import Productos CSV ─────────────────────────────
+function importarProductos() { showModal('import-productos-modal'); }
 
 function handleProductosCSV(input) {
   const file = input.files[0];
@@ -408,43 +372,33 @@ function handleProductosCSV(input) {
   const reader = new FileReader();
   reader.onload = e => {
     const lines = e.target.result.split('\n').filter(l => l.trim());
-    const rows  = lines.slice(1).map(l => l.split(',').map(v => v.trim().replace(/^"|"$/g,'')));
+    const rows = lines.slice(1).map(l => l.split(',').map(v => v.trim().replace(/^"|"$/g,'')));
     App.csvProductos = rows.filter(r => r.length >= 2 && r[0]);
-    const info    = document.getElementById('csv-productos-info');
-    const preview = document.getElementById('csv-productos-preview');
-    if (info)    info.textContent = `✓ ${App.csvProductos.length} productos listos para importar`;
-    if (preview) preview.style.display = 'block';
+    document.getElementById('csv-productos-info').textContent = `Se encontraron ${App.csvProductos.length} productos para importar`;
+    document.getElementById('csv-productos-preview').style.display = 'block';
   };
   reader.readAsText(file, 'UTF-8');
 }
 
 async function confirmarImportarProductos() {
+  if (!App.csvProductos.length) return;
   const input = document.getElementById('csv-productos-input');
-  if (!input || !input.files[0]) { showMessage('Selecciona un archivo CSV primero','error'); return; }
-  if (!App.csvProductos.length)  { showMessage('El archivo no tiene datos válidos','error'); return; }
-  const btn = document.querySelector('#import-productos-modal .btn-primary');
-  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importando...'; }
   const formData = new FormData();
   formData.append('file', input.files[0]);
   try {
-    const res  = await fetch('/api/products/import', { method:'POST', body: formData });
+    const res = await fetch('/api/products/import', { method: 'POST', body: formData });
     const data = await res.json();
     if (data.success) {
       hideModal('import-productos-modal');
       showMessage(data.message || `${data.imported_count} productos importados`, 'success');
-      const preview = document.getElementById('csv-productos-preview');
-      if (preview) preview.style.display = 'none';
-      input.value      = '';
-      App.csvProductos = [];
-      await loadProducts();
-    } else { showMessage(data.error || 'Error al importar','error'); }
-  } catch(e) { showMessage('Error de conexión: '+e.message,'error'); }
-  finally {
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-upload"></i> Importar'; }
-  }
+      document.getElementById('csv-productos-preview').style.display = 'none';
+      input.value = '';
+      loadProducts();
+    } else { showMessage(data.error || 'Error al importar', 'error'); }
+  } catch { showMessage('Error de conexión', 'error'); }
 }
 
-// ── Documentos ────────────────────────────────────────────────────
+// ── Documentos ────────────────────────────────────────
 async function loadDocuments() {
   showLoading('documents-table-body', 7);
   try {
@@ -503,31 +457,6 @@ function filtrarDocumentos() {
   ));
 }
 
-function verDocumento(id) {
-  const doc = App.documents.find(d => d.id === id);
-  if (!doc) return;
-  App.docViendoId = id;
-  document.getElementById('ver-doc-title').textContent = doc.number || 'Documento';
-  document.getElementById('doc-preview-content').innerHTML = generarHTMLDoc(doc);
-  showModal('ver-documento-modal');
-}
-
-function descargarPDFActual() {
-  if (App.docViendoId) descargarPDF(App.docViendoId);
-}
-
-function editarDocumento(id) {
-  const doc = App.documents.find(d => d.id === id);
-  if (!doc) return;
-  document.getElementById('editar-doc-id').value      = id;
-  document.getElementById('editar-doc-estado').value  = doc.estado  || 'pendiente';
-  document.getElementById('editar-doc-validez').value = doc.validez || 30;
-  document.getElementById('editar-doc-notas').value   = doc.notas   || '';
-  const title = document.getElementById('editar-doc-title');
-  if (title) title.textContent = `Editar: ${doc.number||'Documento'}`;
-  showModal('editar-documento-modal');
-}
-
 function cambiarEstadoDoc(id) {
   const doc = App.documents.find(d => d.id === id);
   if (!doc) return;
@@ -555,100 +484,25 @@ function cambiarEstadoDoc(id) {
   showModal('cambiar-estado-modal');
 }
 
-async function confirmarCambiarEstado() {
-  const id     = parseInt(document.getElementById('estado-doc-id').value);
-  const estado = document.getElementById('estado-select').value;
-  try {
-    const res  = await fetch(`/api/documents/${id}`, {
-      method: 'PUT', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ estado })
-    });
-    const data = await res.json();
-    if (data.success) {
-      hideModal('cambiar-estado-modal');
-      showMessage('Estado actualizado','success');
-      await loadDocuments();
-    } else { showMessage(data.error||'Error al actualizar','error'); }
-  } catch { showMessage('Error de conexión','error'); }
-}
-
-async function convertirAFactura(id) {
+function verDocumento(id) {
   const doc = App.documents.find(d => d.id === id);
   if (!doc) return;
-  if (!confirm(`¿Convertir la cotización ${doc.number} en Factura? Se creará una nueva factura con los mismos datos.`)) return;
+  App.docViendoId = id;
+  document.getElementById('ver-doc-title').textContent = doc.number || 'Documento';
+  document.getElementById('doc-preview-content').innerHTML = generarHTMLDoc(doc);
+  showModal('ver-documento-modal');
+}
+
+async function generarPDF(id) {
   try {
-    const res  = await fetch(`/api/documents/${id}/convertir`, { method:'POST' });
+    const res = await fetch(`/api/generate-pdf/${id}`);
     const data = await res.json();
-    if (data.success) {
-      hideModal('cambiar-estado-modal');
-      showMessage(`Factura ${data.factura.number} creada exitosamente ✓`, 'success');
-      await loadDocuments();
-    } else { showMessage(data.error||'Error al convertir','error'); }
-  } catch { showMessage('Error de conexión','error'); }
+    if (data.success) showMessage('PDF generado exitosamente', 'success');
+    else showMessage('Error al generar PDF', 'error');
+  } catch { showMessage('Error al generar PDF', 'error'); }
 }
 
-async function confirmarEditarDoc() {
-  const id     = parseInt(document.getElementById('editar-doc-id').value);
-  const estado = document.getElementById('editar-doc-estado').value;
-  const validez= parseInt(document.getElementById('editar-doc-validez').value) || 30;
-  const notas  = document.getElementById('editar-doc-notas').value;
-  try {
-    const res  = await fetch(`/api/documents/${id}`, {
-      method:'PUT', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ estado, validez, notas })
-    });
-    const data = await res.json();
-    if (data.success) {
-      hideModal('editar-documento-modal');
-      showMessage('Documento actualizado','success');
-      await loadDocuments();
-    } else { showMessage(data.error||'Error al actualizar','error'); }
-  } catch { showMessage('Error de conexión','error'); }
-}
-
-async function eliminarDocumento(id) {
-  if (!confirm('¿Eliminar este documento? Esta acción no se puede deshacer.')) return;
-  try {
-    const res  = await fetch(`/api/documents/${id}`, { method:'DELETE' });
-    const data = await res.json();
-    if (data.success) { showMessage('Documento eliminado','success'); await loadDocuments(); }
-    else showMessage(data.error||'Error al eliminar','error');
-  } catch { showMessage('Error de conexión','error'); }
-}
-
-function descargarPDF(id) {
-  const doc = App.documents.find(d => d.id === id);
-  if (!doc) return;
-  const htmlContent = generarHTMLDoc(doc);
-  const ventana = window.open('','_blank');
-  if (!ventana) { showMessage('Permite ventanas emergentes para descargar PDF','error'); return; }
-  ventana.document.write(`<!DOCTYPE html><html><head>
-    <meta charset="utf-8">
-    <title>${escHtml(doc.number||'Documento')}</title>
-    <style>
-      * { box-sizing: border-box; margin: 0; padding: 0; }
-      body { font-family: Arial, Helvetica, sans-serif; font-size: 10pt; color: #111; background: white; }
-      .pagina { width: 210mm; min-height: 297mm; padding: 15mm; margin: 0 auto; }
-      table { width: 100%; border-collapse: collapse; }
-      @page { size: A4; margin: 0; }
-      @media print {
-        html, body { width: 210mm; height: 297mm; }
-        .pagina { padding: 12mm 14mm; margin: 0; }
-        button { display: none !important; }
-      }
-      @media screen {
-        body { background: #e5e7eb; padding: 20px; }
-        .pagina { box-shadow: 0 4px 24px rgba(0,0,0,.15); background: white; }
-      }
-    </style>
-  </head><body>
-    <div class="pagina">${htmlContent}</div>
-    <script>setTimeout(()=>{window.print();},500);<\/script>
-  </body></html>`);
-  ventana.document.close();
-}
-
-// ── Crear Documento ───────────────────────────────────────────────
+// ── Crear Documento ──────────────────────────────────
 function initCrearDoc() {
   const fechaEl = document.getElementById('doc-fecha');
   if (fechaEl && !fechaEl.value) fechaEl.value = new Date().toISOString().split('T')[0];
@@ -670,26 +524,6 @@ function popularSelectClientes() {
     sel.appendChild(opt);
   });
   if (current) sel.value = current;
-}
-
-function onClienteChange() {
-  const sel    = document.getElementById('doc-cliente');
-  const opt    = sel.options[sel.selectedIndex];
-  const email  = opt?.dataset?.email || '';
-  const hint   = document.getElementById('doc-email-hint');
-  const toggle = document.getElementById('doc-enviar-email');
-  if (hint) {
-    if (email) {
-      hint.textContent = `Se enviará a: ${email}`;
-      hint.style.color = '#34d399';
-      if (toggle) { toggle.disabled = false; }
-    } else {
-      hint.textContent = 'Este cliente no tiene email registrado';
-      hint.style.color = '#f87171';
-      if (toggle) { toggle.checked = false; toggle.disabled = true; }
-    }
-  }
-  actualizarPreview();
 }
 
 function seleccionarTipoDoc(tipo) {
@@ -727,75 +561,7 @@ function seleccionarTipoDoc(tipo) {
   actualizarPreview();
 }
 
-function popularSelectProveedores() {
-  const sel = document.getElementById('doc-proveedor');
-  if (!sel) return;
-  sel.innerHTML = '<option value="">— Seleccionar proveedor —</option>';
-  App.providers.forEach(p => {
-    const opt = document.createElement('option');
-    opt.value       = p.id;
-    opt.textContent = `${p.nombre || p.razon_social || ''}${p.rut?' ('+p.rut+')':''}`;
-    sel.appendChild(opt);
-  });
-}
-
-function onProveedorChange() {
-  actualizarPreview();
-}
-
-// ── Selector de producto del sistema ─────────────────────────────
-function abrirSelectorProducto() {
-  if (App.products.length === 0) {
-    fetch('/api/products').then(r=>r.json()).then(ps=>{ App.products=ps; renderSelectorProductos(ps); });
-  } else { renderSelectorProductos(App.products); }
-  showModal('selector-producto-modal');
-  const inp = document.getElementById('selector-search');
-  if (inp) { inp.value=''; inp.focus(); }
-}
-
-function renderSelectorProductos(list) {
-  const tbody = document.getElementById('selector-productos-body');
-  if (!tbody) return;
-  if (!list.length) {
-    tbody.innerHTML = `<tr><td colspan="6" class="empty-table-message">No hay productos en el sistema</td></tr>`;
-    return;
-  }
-  tbody.innerHTML = list.map(p => `
-    <tr>
-      <td style="font-size:.8rem;">${p.sku||'—'}</td>
-      <td style="font-weight:500;">${p.nombre||'—'}</td>
-      <td style="font-size:.8rem;color:#94a3b8;">${p.categoria||'—'}</td>
-      <td style="font-weight:600;">${formatCLP(p.precio||0)}</td>
-      <td style="font-size:.8rem;">${p.stock??0}</td>
-      <td>
-        <button onclick="agregarProductoDelSistema(${p.id})"
-          style="background:#3b82f6;color:white;border:none;border-radius:6px;padding:.3rem .7rem;font-size:.8rem;cursor:pointer;white-space:nowrap;">
-          <i class="fas fa-plus"></i> Agregar
-        </button>
-      </td>
-    </tr>`).join('');
-}
-
-function filtrarSelectorProductos(q) {
-  q = (q||'').toLowerCase();
-  const filtered = App.products.filter(p =>
-    (p.sku||'').toLowerCase().includes(q) ||
-    (p.nombre||'').toLowerCase().includes(q) ||
-    (p.categoria||'').toLowerCase().includes(q)
-  );
-  renderSelectorProductos(filtered);
-}
-
-function agregarProductoDelSistema(id) {
-  const p = App.products.find(x => x.id === id);
-  if (!p) return;
-  agregarLineaDoc(p.nombre, 1, p.precio);
-  hideModal('selector-producto-modal');
-}
-
-// ── Líneas de documento ───────────────────────────────────────────
 let lineaCounter = 0;
-
 function agregarLineaDoc(desc='', qty=1, precio=0) {
   const id        = ++lineaCounter;
   const container = document.getElementById('doc-lineas');
@@ -862,10 +628,6 @@ function actualizarPreview() {
     subtotal: subtotalN, iva: ivaN, total: totalN,
     number:'VISTA PREVIA'
   });
-}
-
-function getDocColor() {
-  return App.config.docColor || '#1d4ed8';
 }
 
 function generarHTMLDoc(doc) {
@@ -1054,7 +816,7 @@ function limpiarFormDoc() {
   calcularTotales();
 }
 
-// ── Reportes ──────────────────────────────────────────────────────
+// ── Reportes ──────────────────────────────────────────
 async function loadReportes() {
   const c = document.getElementById('reportes-content');
   if (!c) return;
@@ -1226,6 +988,279 @@ function renderReportes(stats) {
     </div>`;
 }
 
+// ── Formularios ───────────────────────────────────────
+function setupForms() {
+  // Cliente
+  const cForm = document.getElementById('cliente-form');
+  if (cForm) cForm.addEventListener('submit', async e => {
+    e.preventDefault();
+    const id = document.getElementById('cliente-id').value;
+    const payload = {
+      rut:          document.getElementById('rut').value.trim(),
+      razon_social: document.getElementById('razon-social').value.trim(),
+      direccion:    document.getElementById('direccion').value.trim(),
+      region:       document.getElementById('region').value,
+      ciudad:       document.getElementById('ciudad').value.trim(),
+      telefono:     document.getElementById('telefono').value.trim(),
+      email:        document.getElementById('email').value.trim(),
+      nota:         document.getElementById('nota').value.trim(),
+    };
+    try {
+      const res = await fetch(id ? `/api/clients/${id}` : '/api/clients', {
+        method: id ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) { hideModal('cliente-modal'); showMessage(id ? 'Cliente actualizado' : 'Cliente creado', 'success'); loadClients(); }
+      else showMessage(data.error || 'Error al guardar', 'error');
+    } catch { showMessage('Error de conexión', 'error'); }
+  });
+
+  // Producto
+  const pForm = document.getElementById('producto-form');
+  if (pForm) pForm.addEventListener('submit', async e => {
+    e.preventDefault();
+    const id = document.getElementById('producto-id').value;
+    const payload = {
+      sku:          document.getElementById('sku').value.trim(),
+      nombre:       document.getElementById('nombre').value.trim(),
+      precio:       parseFloat(document.getElementById('precio').value)||0,
+      stock:        parseInt(document.getElementById('stock').value)||0,
+      stock_minimo: parseInt(document.getElementById('stock_minimo').value)||0,
+      categoria:    document.getElementById('categoria').value.trim(),
+      proveedor:    document.getElementById('proveedor').value.trim(),
+      descripcion:  document.getElementById('descripcion-producto').value.trim(),
+    };
+    try {
+      const res = await fetch(id ? `/api/products/${id}` : '/api/products', {
+        method: id ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) { hideModal('producto-modal'); showMessage(id ? 'Producto actualizado' : 'Producto creado', 'success'); loadProducts(); }
+      else showMessage(data.error || 'Error al guardar', 'error');
+    } catch { showMessage('Error de conexión', 'error'); }
+  });
+
+  // Perfil
+  const perfilForm = document.getElementById('perfil-form');
+  if (perfilForm) perfilForm.addEventListener('submit', async e => {
+    e.preventDefault();
+    const nombre = document.getElementById('perfil-nombre').value.trim();
+    const email  = document.getElementById('perfil-email').value.trim();
+    const pwdAct = document.getElementById('perfil-pwd-actual').value;
+    const pwdNew = document.getElementById('perfil-pwd-nueva').value;
+    const payload = { name: nombre, email };
+    if (pwdNew) { payload.password_actual = pwdAct; payload.password_nueva = pwdNew; }
+    try {
+      const res = await fetch('/api/user/update', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        hideModal('perfil-modal');
+        showMessage('Perfil actualizado', 'success');
+        await loadUser();
+      } else showMessage(data.error || 'Error al actualizar', 'error');
+    } catch { showMessage('Error de conexión', 'error'); }
+  });
+}
+
+// ── Búsqueda ──────────────────────────────────────────
+function setupSearch() {
+  const cs = document.getElementById('client-search');
+  if (cs) cs.addEventListener('input', e => {
+    const q = e.target.value.toLowerCase();
+    renderClients(App.clients.filter(c =>
+      (c.rut||'').toLowerCase().includes(q) ||
+      (c.razon_social||'').toLowerCase().includes(q) ||
+      (c.ciudad||'').toLowerCase().includes(q) ||
+      (c.email||'').toLowerCase().includes(q)
+    ));
+  });
+  const ps = document.getElementById('product-search');
+  if (ps) ps.addEventListener('input', e => {
+    const q = e.target.value.toLowerCase();
+    renderProducts(App.products.filter(p =>
+      (p.sku||'').toLowerCase().includes(q) ||
+      (p.nombre||'').toLowerCase().includes(q) ||
+      (p.categoria||'').toLowerCase().includes(q) ||
+      (p.proveedor||'').toLowerCase().includes(q)
+    ));
+  });
+}
+
+// ── Perfil ────────────────────────────────────────────
+function abrirPerfil() {
+  if (App.user) {
+    document.getElementById('perfil-nombre').value = App.user.name || '';
+    document.getElementById('perfil-email').value  = App.user.email || '';
+    document.getElementById('perfil-pwd-actual').value = '';
+    document.getElementById('perfil-pwd-nueva').value  = '';
+    const av = document.getElementById('perfil-avatar');
+    if (av) av.textContent = (App.user.name||'U').charAt(0).toUpperCase();
+  }
+  showModal('perfil-modal');
+}
+
+// ── Configuración ─────────────────────────────────────
+function abrirConfiguracion() {
+  const cfg = App.config;
+  if (cfg.empresaNombre) document.getElementById('cfg-empresa-nombre').value = cfg.empresaNombre;
+  if (cfg.empresaRut) document.getElementById('cfg-empresa-rut').value = cfg.empresaRut;
+  if (cfg.empresaTelefono) document.getElementById('cfg-empresa-telefono').value = cfg.empresaTelefono;
+  if (cfg.empresaDireccion) document.getElementById('cfg-empresa-direccion').value = cfg.empresaDireccion;
+  if (cfg.empresaEmail) document.getElementById('cfg-empresa-email').value = cfg.empresaEmail;
+  if (cfg.prefijosCot) document.getElementById('cfg-prefijo-cot').value = cfg.prefijosCot;
+  if (cfg.prefijosOC) document.getElementById('cfg-prefijo-oc').value = cfg.prefijosOC;
+  if (cfg.prefijosFac) document.getElementById('cfg-prefijo-fac').value = cfg.prefijosFac;
+  if (cfg.piePagina) document.getElementById('cfg-pie-pagina').value = cfg.piePagina;
+  if (cfg.appNombre) document.getElementById('cfg-app-nombre').value = cfg.appNombre;
+  showModal('config-modal');
+}
+
+function mostrarCfgPanel(panel) {
+  document.querySelectorAll('.cfg-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.cfg-tab').forEach(t => t.classList.remove('active'));
+  const p = document.getElementById(`cfgpanel-${panel}`);
+  const t = document.getElementById(`cfgtab-${panel}`);
+  if (p) p.classList.add('active');
+  if (t) t.classList.add('active');
+}
+
+function guardarConfiguracion() {
+  App.config = {
+    ...App.config,
+    empresaNombre: document.getElementById('cfg-empresa-nombre')?.value,
+    empresaRut:    document.getElementById('cfg-empresa-rut')?.value,
+    empresaTelefono: document.getElementById('cfg-empresa-telefono')?.value,
+    empresaDireccion: document.getElementById('cfg-empresa-direccion')?.value,
+    empresaEmail:  document.getElementById('cfg-empresa-email')?.value,
+    prefijosCot:   document.getElementById('cfg-prefijo-cot')?.value,
+    prefijosOC:    document.getElementById('cfg-prefijo-oc')?.value,
+    prefijosFac:   document.getElementById('cfg-prefijo-fac')?.value,
+    piePagina:     document.getElementById('cfg-pie-pagina')?.value,
+    appNombre:     document.getElementById('cfg-app-nombre')?.value,
+    incluirIva:    document.getElementById('cfg-incluir-iva')?.checked,
+    mostrarLogo:   document.getElementById('cfg-mostrar-logo')?.checked,
+    mostrarEmpresa: document.getElementById('cfg-mostrar-empresa')?.checked,
+  };
+  try { localStorage.setItem('cotifacil_config', JSON.stringify(App.config)); } catch(e) {}
+  aplicarConfig();
+  hideModal('config-modal');
+  showMessage('Configuración guardada', 'success');
+}
+
+function handleLogoUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 2 * 1024 * 1024) { showMessage('Logo muy grande, máximo 2MB', 'error'); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    App.config.logo = e.target.result;
+    const container = document.getElementById('logo-preview-container');
+    if (container) container.innerHTML = `<img src="${e.target.result}" style="max-height:60px;max-width:160px;object-fit:contain;">`;
+    showMessage('Logo cargado correctamente', 'success');
+  };
+  reader.readAsDataURL(file);
+}
+
+function cambiarColor(color, btn) {
+  document.querySelectorAll('.color-swatch').forEach(b => b.classList.remove('selected'));
+  if (btn) btn.classList.add('selected');
+  App.config.color = color;
+  document.documentElement.style.setProperty('--primary-color', color);
+}
+
+// ── Dropdown ──────────────────────────────────────────
+function toggleDropdown(menuId) {
+  const menu = document.getElementById(menuId);
+  if (!menu) return;
+  const isOpen = menu.classList.contains('open');
+  closeDropdowns();
+  if (!isOpen) menu.classList.add('open');
+}
+
+function closeDropdowns() {
+  document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.remove('open'));
+}
+
+function setupDropdownClose() {
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.dropdown')) closeDropdowns();
+  });
+}
+
+// ── Modales ───────────────────────────────────────────
+function showModal(id) {
+  const m = document.getElementById(id);
+  if (m) { m.style.display = 'block'; m.classList.add('scale-in'); }
+}
+
+function hideModal(id) {
+  const m = document.getElementById(id);
+  if (m) m.style.display = 'none';
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+});
+
+// ── Notificaciones ────────────────────────────────────
+function showMessage(text, type = 'success') {
+  const prev = document.getElementById('global-message');
+  if (prev) prev.remove();
+  const div = document.createElement('div');
+  div.id = 'global-message';
+  div.style.cssText = `
+    position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;
+    padding:.875rem 1.25rem;border-radius:10px;font-size:.9rem;font-weight:500;
+    display:flex;align-items:center;gap:.6rem;box-shadow:0 10px 30px rgba(0,0,0,.3);
+    animation:slideIn .3s ease;
+    ${type === 'success'
+      ? 'background:#052e16;border:1px solid #166534;color:#86efac;'
+      : 'background:#2d0808;border:1px solid #7f1d1d;color:#fca5a5;'}
+  `;
+  div.innerHTML = `<i class="fas ${type==='success'?'fa-check-circle':'fa-exclamation-circle'}"></i><span>${text}</span>`;
+  document.body.appendChild(div);
+  setTimeout(() => div.remove(), 3500);
+}
+
+// ── Helpers ───────────────────────────────────────────
+function setText(selector, value) {
+  const el = typeof selector === 'string'
+    ? (selector.startsWith('[') || selector.startsWith('#') && !document.getElementById(selector.slice(1))
+       ? document.querySelector(selector) : document.getElementById(selector.replace(/^#/,'')))
+    : selector;
+  if (el) el.textContent = value;
+}
+
+function formatCLP(amount) {
+  return new Intl.NumberFormat('es-CL', { style:'currency', currency:'CLP', minimumFractionDigits:0 }).format(amount);
+}
+
+function capitalize(str) { return str ? str.charAt(0).toUpperCase() + str.slice(1) : ''; }
+
+function tipoLabel(tipo) {
+  const map = { cotizacion:'Cotización', orden_compra:'Orden Compra', factura:'Factura' };
+  return map[tipo] || tipo || '—';
+}
+
+function showLoading(tbodyId, cols = 6) {
+  const el = document.getElementById(tbodyId);
+  if (el) el.innerHTML = `<tr><td colspan="${cols}" class="empty-table-message"><i class="fas fa-spinner fa-spin" style="margin-right:.5rem;"></i>Cargando...</td></tr>`;
+}
+
+function showError(tbodyId, msg, cols = 6) {
+  const el = document.getElementById(tbodyId);
+  if (el) el.innerHTML = `<tr><td colspan="${cols}" class="empty-table-message" style="color:#f87171;"><i class="fas fa-exclamation-circle" style="margin-right:.5rem;"></i>${msg}</td></tr>`;
+}
+
+
 function renderProviders(list) {
   const tbody = document.getElementById('proveedores-table-body');
   if (!tbody) return;
@@ -1275,17 +1310,6 @@ function renderProviders(list) {
   }).join('');
 }
 
-function actualizarStatProveedores() {
-  const list = App.providers || [];
-  const total = list.length;
-  const conEmail = list.filter(p => p.email && p.email.includes('@')).length;
-  const totalOrdenes = list.reduce((s, p) => s + (p.ordenes || 0), 0);
-  const setStat = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-  setStat('prov-stat-total',   total);
-  setStat('prov-stat-email',   conEmail);
-  setStat('prov-stat-ordenes', totalOrdenes);
-}
-
 
 
 async function loadProveedoresPage() {
@@ -1305,6 +1329,8 @@ async function loadProveedoresPage() {
   actualizarStatProveedores();
 }
 
+
+
 function filtrarProveedores(query) {
   const q = query.toLowerCase().trim();
   if (!q) { renderProviders(App.providers); return; }
@@ -1317,63 +1343,274 @@ function filtrarProveedores(query) {
   renderProviders(filtered);
 }
 
-// ── Exponer funciones al scope global (necesario para onclick inline) ──
-window.testearEmail            = testearEmail;
-window.crearCliente            = crearCliente;
-window.crearProveedor          = crearProveedor;
-window.editarProveedor         = editarProveedor;
-window.eliminarProveedor       = eliminarProveedor;
-window.guardarProveedor        = guardarProveedor;
-window.popularSelectProveedores= popularSelectProveedores;
-window.onProveedorChange       = onProveedorChange;
-window.cambiarEstadoDoc        = cambiarEstadoDoc;
+
+
+function actualizarStatProveedores() {
+  const list = App.providers || [];
+  const total = list.length;
+  const conEmail = list.filter(p => p.email && p.email.includes('@')).length;
+  const totalOrdenes = list.reduce((s, p) => s + (p.ordenes || 0), 0);
+  const setStat = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  setStat('prov-stat-total',   total);
+  setStat('prov-stat-email',   conEmail);
+  setStat('prov-stat-ordenes', totalOrdenes);
+}
+
+
+
+
+
+function escHtml(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+
+window.renderProviders         = renderProviders;
+window.loadProveedoresPage     = loadProveedoresPage;
+window.filtrarProveedores      = filtrarProveedores;
+window.actualizarStatProveedores = actualizarStatProveedores;
 window.confirmarCambiarEstado  = confirmarCambiarEstado;
-window.convertirAFactura       = convertirAFactura;
-window.editarCliente           = editarCliente;
-window.eliminarCliente         = eliminarCliente;
-window.exportarClientes        = exportarClientes;
-window.importarClientes        = importarClientes;
-window.handleClientesCSV       = handleClientesCSV;
-window.confirmarImportarClientes = confirmarImportarClientes;
-
-window.crearProducto           = crearProducto;
-window.editarProducto          = editarProducto;
-window.eliminarProducto        = eliminarProducto;
-window.importarProductos       = importarProductos;
-window.handleProductosCSV      = handleProductosCSV;
-window.confirmarImportarProductos = confirmarImportarProductos;
-
-window.guardarDocumento        = guardarDocumento;
-window.limpiarFormDoc          = limpiarFormDoc;
-window.verDocumento            = verDocumento;
-window.editarDocumento         = editarDocumento;
 window.confirmarEditarDoc      = confirmarEditarDoc;
-window.eliminarDocumento       = eliminarDocumento;
-window.descargarPDF            = descargarPDF;
+window.convertirAFactura       = convertirAFactura;
 window.descargarPDFActual      = descargarPDFActual;
+window.editarDocumento         = editarDocumento;
+window.eliminarDocumento       = eliminarDocumento;
 window.filtrarDocumentos       = filtrarDocumentos;
-
-window.seleccionarTipoDoc      = seleccionarTipoDoc;
-window.onClienteChange         = onClienteChange;
-window.agregarLineaDoc         = agregarLineaDoc;
-window.eliminarLinea           = eliminarLinea;
-window.calcularTotales         = calcularTotales;
 window.abrirSelectorProducto   = abrirSelectorProducto;
 window.filtrarSelectorProductos = filtrarSelectorProductos;
 window.agregarProductoDelSistema = agregarProductoDelSistema;
-
-window.showModal               = showModal;
-window.hideModal               = hideModal;
-window.toggleDropdown          = toggleDropdown;
-window.abrirPerfil             = abrirPerfil;
-window.abrirConfiguracion      = abrirConfiguracion;
-window.guardarConfiguracion    = guardarConfiguracion;
-window.mostrarCfgPanel         = mostrarCfgPanel;
-window.handleLogoUpload        = handleLogoUpload;
-window.cambiarColor            = cambiarColor;
-window.cambiarColorDocCustom   = cambiarColorDocCustom;
-window.doLogout                = doLogout;
+window.onClienteChange         = onClienteChange;
+window.popularSelectProveedores= popularSelectProveedores;
+window.onProveedorChange       = onProveedorChange;
 window.loadReportes            = loadReportes;
-window.filtrarProveedores      = filtrarProveedores;
 
-} // ── fin bloque if pathname !== /login ──────────────────────────
+
+async function confirmarCambiarEstado() {
+  const id     = parseInt(document.getElementById('estado-doc-id').value);
+  const estado = document.getElementById('estado-select').value;
+  try {
+    const res  = await fetch(`/api/documents/${id}`, {
+      method: 'PUT', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ estado })
+    });
+    const data = await res.json();
+    if (data.success) {
+      hideModal('cambiar-estado-modal');
+      showMessage('Estado actualizado','success');
+      await loadDocuments();
+    } else { showMessage(data.error||'Error al actualizar','error'); }
+  } catch { showMessage('Error de conexión','error'); }
+}
+
+
+
+async function convertirAFactura(id) {
+  const doc = App.documents.find(d => d.id === id);
+  if (!doc) return;
+  if (!confirm(`¿Convertir la cotización ${doc.number} en Factura? Se creará una nueva factura con los mismos datos.`)) return;
+  try {
+    const res  = await fetch(`/api/documents/${id}/convertir`, { method:'POST' });
+    const data = await res.json();
+    if (data.success) {
+      hideModal('cambiar-estado-modal');
+      showMessage(`Factura ${data.factura.number} creada exitosamente ✓`, 'success');
+      await loadDocuments();
+    } else { showMessage(data.error||'Error al convertir','error'); }
+  } catch { showMessage('Error de conexión','error'); }
+}
+
+
+
+async function eliminarDocumento(id) {
+  if (!confirm('¿Eliminar este documento? Esta acción no se puede deshacer.')) return;
+  try {
+    const res  = await fetch(`/api/documents/${id}`, { method:'DELETE' });
+    const data = await res.json();
+    if (data.success) { showMessage('Documento eliminado','success'); await loadDocuments(); }
+    else showMessage(data.error||'Error al eliminar','error');
+  } catch { showMessage('Error de conexión','error'); }
+}
+
+
+
+function descargarPDF(id) {
+  const doc = App.documents.find(d => d.id === id);
+  if (!doc) return;
+  const htmlContent = generarHTMLDoc(doc);
+  const ventana = window.open('','_blank');
+  if (!ventana) { showMessage('Permite ventanas emergentes para descargar PDF','error'); return; }
+  ventana.document.write(`<!DOCTYPE html><html><head>
+    <meta charset="utf-8">
+    <title>${escHtml(doc.number||'Documento')}</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: Arial, Helvetica, sans-serif; font-size: 10pt; color: #111; background: white; }
+      .pagina { width: 210mm; min-height: 297mm; padding: 15mm; margin: 0 auto; }
+      table { width: 100%; border-collapse: collapse; }
+      @page { size: A4; margin: 0; }
+      @media print {
+        html, body { width: 210mm; height: 297mm; }
+        .pagina { padding: 12mm 14mm; margin: 0; }
+        button { display: none !important; }
+      }
+      @media screen {
+        body { background: #e5e7eb; padding: 20px; }
+        .pagina { box-shadow: 0 4px 24px rgba(0,0,0,.15); background: white; }
+      }
+    </style>
+  </head><body>
+    <div class="pagina">${htmlContent}</div>
+    <script>setTimeout(()=>{window.print();},500);<\/script>
+  </body></html>`);
+  ventana.document.close();
+}
+
+
+
+function descargarPDFActual() {
+  if (App.docViendoId) descargarPDF(App.docViendoId);
+}
+
+
+
+async function confirmarEditarDoc() {
+  const id     = parseInt(document.getElementById('editar-doc-id').value);
+  const estado = document.getElementById('editar-doc-estado').value;
+  const validez= parseInt(document.getElementById('editar-doc-validez').value) || 30;
+  const notas  = document.getElementById('editar-doc-notas').value;
+  try {
+    const res  = await fetch(`/api/documents/${id}`, {
+      method:'PUT', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ estado, validez, notas })
+    });
+    const data = await res.json();
+    if (data.success) {
+      hideModal('editar-documento-modal');
+      showMessage('Documento actualizado','success');
+      await loadDocuments();
+    } else { showMessage(data.error||'Error al actualizar','error'); }
+  } catch { showMessage('Error de conexión','error'); }
+}
+
+
+
+function editarDocumento(id) {
+  const doc = App.documents.find(d => d.id === id);
+  if (!doc) return;
+  document.getElementById('editar-doc-id').value      = id;
+  document.getElementById('editar-doc-estado').value  = doc.estado  || 'pendiente';
+  document.getElementById('editar-doc-validez').value = doc.validez || 30;
+  document.getElementById('editar-doc-notas').value   = doc.notas   || '';
+  const title = document.getElementById('editar-doc-title');
+  if (title) title.textContent = `Editar: ${doc.number||'Documento'}`;
+  showModal('editar-documento-modal');
+}
+
+
+
+function onClienteChange() {
+  const sel    = document.getElementById('doc-cliente');
+  const opt    = sel.options[sel.selectedIndex];
+  const email  = opt?.dataset?.email || '';
+  const hint   = document.getElementById('doc-email-hint');
+  const toggle = document.getElementById('doc-enviar-email');
+  if (hint) {
+    if (email) {
+      hint.textContent = `Se enviará a: ${email}`;
+      hint.style.color = '#34d399';
+      if (toggle) { toggle.disabled = false; }
+    } else {
+      hint.textContent = 'Este cliente no tiene email registrado';
+      hint.style.color = '#f87171';
+      if (toggle) { toggle.checked = false; toggle.disabled = true; }
+    }
+  }
+  actualizarPreview();
+}
+
+
+
+function popularSelectProveedores() {
+  const sel = document.getElementById('doc-proveedor');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— Seleccionar proveedor —</option>';
+  App.providers.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value       = p.id;
+    opt.textContent = `${p.nombre || p.razon_social || ''}${p.rut?' ('+p.rut+')':''}`;
+    sel.appendChild(opt);
+  });
+}
+
+
+
+function onProveedorChange() {
+  actualizarPreview();
+}
+
+
+
+function abrirSelectorProducto() {
+  if (App.products.length === 0) {
+    fetch('/api/products').then(r=>r.json()).then(ps=>{ App.products=ps; renderSelectorProductos(ps); });
+  } else { renderSelectorProductos(App.products); }
+  showModal('selector-producto-modal');
+  const inp = document.getElementById('selector-search');
+  if (inp) { inp.value=''; inp.focus(); }
+}
+
+
+
+function renderSelectorProductos(list) {
+  const tbody = document.getElementById('selector-productos-body');
+  if (!tbody) return;
+  if (!list.length) {
+    tbody.innerHTML = `<tr><td colspan="6" class="empty-table-message">No hay productos en el sistema</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = list.map(p => `
+    <tr>
+      <td style="font-size:.8rem;">${p.sku||'—'}</td>
+      <td style="font-weight:500;">${p.nombre||'—'}</td>
+      <td style="font-size:.8rem;color:#94a3b8;">${p.categoria||'—'}</td>
+      <td style="font-weight:600;">${formatCLP(p.precio||0)}</td>
+      <td style="font-size:.8rem;">${p.stock??0}</td>
+      <td>
+        <button onclick="agregarProductoDelSistema(${p.id})"
+          style="background:#3b82f6;color:white;border:none;border-radius:6px;padding:.3rem .7rem;font-size:.8rem;cursor:pointer;white-space:nowrap;">
+          <i class="fas fa-plus"></i> Agregar
+        </button>
+      </td>
+    </tr>`).join('');
+}
+
+
+
+function filtrarSelectorProductos(q) {
+  q = (q||'').toLowerCase();
+  const filtered = App.products.filter(p =>
+    (p.sku||'').toLowerCase().includes(q) ||
+    (p.nombre||'').toLowerCase().includes(q) ||
+    (p.categoria||'').toLowerCase().includes(q)
+  );
+  renderSelectorProductos(filtered);
+}
+
+
+
+function agregarProductoDelSistema(id) {
+  const p = App.products.find(x => x.id === id);
+  if (!p) return;
+  agregarLineaDoc(p.nombre, 1, p.precio);
+  hideModal('selector-producto-modal');
+}
+
+
+
+function getDocColor() {
+  return App.config.docColor || '#1d4ed8';
+}
+
+
+
+} // fin bloque if pathname !== /login
