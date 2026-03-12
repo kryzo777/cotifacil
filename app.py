@@ -20,7 +20,7 @@ if DATABASE_URL:
             url = DATABASE_URL
             if url.startswith('postgres://'):
                 url = url.replace('postgres://', 'postgresql://', 1)
-            _pool = SimpleConnectionPool(1, 5, url)
+            _pool = SimpleConnectionPool(1, 5, url, connect_timeout=10)
         return _pool
 
     def get_conn():
@@ -1008,7 +1008,7 @@ def api_stats():
         from collections import defaultdict
         ventas_mes = defaultdict(float)
         for doc in docs:
-            if doc.get('tipo')=='orden_compra': continue
+            if doc.get('tipo') != 'factura': continue
             fecha = (doc.get('date') or '')[:7]  # YYYY-MM
             if fecha: ventas_mes[fecha] += doc.get('total',0)
 
@@ -1031,10 +1031,5 @@ init_db()
 _init_tokens_table()
 
 if __name__ == '__main__':
-    app.run(debug=True)
-
-if __name__ == "__main__":
-    # Render asigna un puerto dinámico, esta línea lo captura
-    port = int(os.environ.get("PORT", 5000))
-    # Es vital usar 0.0.0.0 para que sea accesible externamente
-    app.run(host='0.0.0.0', port=port)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)

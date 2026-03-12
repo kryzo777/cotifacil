@@ -1065,7 +1065,7 @@ async function loadReportes() {
     renderReportes(stats);
   } catch(e) {
     console.error('Error reportes', e);
-    if (c) c.innerHTML = `<p style="color:#f87171;padding:2rem;text-align:center;"><i class="fas fa-exclamation-triangle"></i> Error al cargar reportes: ${e.message}</p>`;
+    if (c) c.innerHTML = `<p style="color:#f87171;padding:2rem;text-align:center;"><i class="fas fa-exclamation-triangle"></i> Error: ${e.message}</p>`;
   }
 }
 
@@ -1339,15 +1339,16 @@ function setupDropdownClose() {
 function showModal(id) {
   const m = document.getElementById(id);
   if (!m) return;
+  // Mover al body para evitar problemas de stacking context
   if (m.parentElement !== document.body) document.body.appendChild(m);
-  m.style.cssText = 'display:flex!important;position:fixed!important;inset:0!important;z-index:9999!important;align-items:center!important;justify-content:center!important;';
+  m.style.display = 'block';
   document.body.style.overflow = 'hidden';
 }
 
 function hideModal(id) {
   const m = document.getElementById(id);
   if (m) {
-    m.style.cssText = 'display:none!important;';
+    m.style.display = 'none';
     document.body.style.overflow = '';
   }
 }
@@ -1548,7 +1549,7 @@ function renderProviders(list) {
 
 async function loadProveedoresPage() {
   try {
-    const res = await fetch('/api/providers');
+    const res  = await fetch('/api/providers');
     const data = await res.json();
     App.providers = Array.isArray(data) ? data : [];
   } catch(e) {
