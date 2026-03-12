@@ -485,33 +485,73 @@ textarea.modal-input{resize:vertical;min-height:70px}
 
       <!-- PROVEEDORES PAGE -->
       <div id="proveedores-page" class="page-content hidden">
-        <div class="flex justify-between items-center mb-4">
-          <h2 class="text-xl font-semibold">Proveedores</h2>
-          <button class="btn-primary" onclick="crearProveedor()"><i class="fas fa-plus"></i> Nuevo Proveedor</button>
+        <!-- Header stats -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem;">
+          <div class="card stat-card">
+            <div class="stat-icon bg-purple"><i class="fas fa-truck"></i></div>
+            <div class="stat-info">
+              <p class="stat-label">Total Proveedores</p>
+              <p class="stat-value" id="prov-stat-total">0</p>
+            </div>
+          </div>
+          <div class="card stat-card">
+            <div class="stat-icon bg-blue"><i class="fas fa-envelope"></i></div>
+            <div class="stat-info">
+              <p class="stat-label">Con Email</p>
+              <p class="stat-value" id="prov-stat-email">0</p>
+            </div>
+          </div>
+          <div class="card stat-card">
+            <div class="stat-icon bg-yellow"><i class="fas fa-shopping-cart"></i></div>
+            <div class="stat-info">
+              <p class="stat-label">Órdenes Emitidas</p>
+              <p class="stat-value" id="prov-stat-ordenes">0</p>
+            </div>
+          </div>
         </div>
+
+        <!-- Tabla -->
         <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem;">
+            <h2 style="font-size:1rem;font-weight:600;color:#f1f5f9;">Lista de Proveedores</h2>
+            <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;">
+              <div style="position:relative;">
+                <i class="fas fa-search" style="position:absolute;left:.75rem;top:50%;transform:translateY(-50%);color:#475569;font-size:.8rem;"></i>
+                <input type="text" id="prov-search" placeholder="Buscar proveedor..." oninput="filtrarProveedores(this.value)"
+                  style="padding:.5rem .75rem .5rem 2.25rem;background:#111e2c;border:1px solid #243447;border-radius:8px;color:#e2e8f0;font-size:.875rem;outline:none;width:220px;">
+              </div>
+              <button class="btn-primary" onclick="crearProveedor()" style="white-space:nowrap;">
+                <i class="fas fa-plus"></i> Nuevo Proveedor
+              </button>
+            </div>
+          </div>
           <div class="table-container">
             <table>
-              <thead><tr>
-                <th>Nombre / Razón Social</th>
-                <th>RUT</th>
-                <th>Email</th>
-                <th>Teléfono</th>
-                <th>Órdenes</th>
-                <th>Acciones</th>
-              </tr></thead>
+              <thead>
+                <tr>
+                  <th>Proveedor</th>
+                  <th>Contacto</th>
+                  <th>Email</th>
+                  <th>Teléfono</th>
+                  <th style="text-align:center;">OC</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
               <tbody id="proveedores-table-body">
-                <tr><td colspan="6" class="empty-table-message">Cargando...</td></tr>
+                <tr><td colspan="6" style="text-align:center;padding:2rem;color:#64748b;"><i class="fas fa-circle-notch fa-spin"></i> Cargando...</td></tr>
               </tbody>
             </table>
           </div>
         </div>
       </div>
-
       <div id="reportes-page" class="page-content hidden">
-        <div id="reportes-content"><p class="text-gray-400">Cargando reportes...</p></div>
+        <div id="reportes-content">
+          <div style="display:flex;align-items:center;justify-content:center;height:200px;gap:.75rem;color:#64748b;">
+            <i class="fas fa-circle-notch fa-spin fa-lg"></i>
+            <span>Cargando reportes...</span>
+          </div>
+        </div>
       </div>
-
     </div>
   </main>
 </div>
