@@ -1032,3 +1032,9 @@ _init_tokens_table()
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+if __name__ == "__main__":
+    # Render asigna un puerto dinámico, esta línea lo captura
+    port = int(os.environ.get("PORT", 5000))
+    # Es vital usar 0.0.0.0 para que sea accesible externamente
+    app.run(host='0.0.0.0', port=port)
