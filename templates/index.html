@@ -16,6 +16,20 @@ select.modal-input option{background:#0f1923;color:#e2e8f0}
 textarea.modal-input{resize:vertical;min-height:70px}
 .modal-content-lg{max-width:52rem!important}
 .modal-content-xl{max-width:72rem!important}
+.stat-card{display:flex;align-items:center;gap:1rem;padding:1.25rem;}
+.stat-icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;}
+.stat-info{flex:1;}
+.stat-label{font-size:.78rem;color:#64748b;font-weight:500;margin-bottom:.2rem;}
+.stat-value{font-size:1.3rem;font-weight:700;color:#f1f5f9;}
+.bg-blue{background:rgba(59,130,246,.15);color:#60a5fa;}
+.bg-green{background:rgba(16,185,129,.15);color:#34d399;}
+.bg-purple{background:rgba(139,92,246,.15);color:#a78bfa;}
+.bg-yellow{background:rgba(245,158,11,.15);color:#fbbf24;}
+.bg-red{background:rgba(239,68,68,.15);color:#f87171;}
+/* ── Modal overlay (fallback if style.css missing) ── */
+.modal{display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;}
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(3px);z-index:0;}
+.modal-content{position:relative;z-index:1;background:#0d1117;border:1px solid rgba(255,255,255,.1);border-radius:16px;width:calc(100% - 2rem);max-width:36rem;max-height:90vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.5);}
 .header-user-btn{display:flex;align-items:center;gap:.5rem;padding:.4rem .75rem;background:#1f2937;border:1px solid #374151;border-radius:10px;color:#d1d5db;cursor:pointer;transition:all .2s;font-size:.875rem}
 .header-user-btn:hover{background:#374151;color:white}
 .header-avatar-sm{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#1d4ed8);display:flex;align-items:center;justify-content:center;font-size:.72rem;color:white;font-weight:700;flex-shrink:0}
@@ -48,18 +62,6 @@ textarea.modal-input{resize:vertical;min-height:70px}
 .doc-preview table{width:100%;border-collapse:collapse;margin-top:.75rem}
 .doc-preview th{background:#f3f4f6;padding:.45rem .6rem;text-align:left;font-size:.75rem;border-bottom:1px solid #d1d5db}
 .doc-preview td{padding:.4rem .6rem;border-bottom:1px solid #e5e7eb;font-size:.78rem}
-.stat-card{display:flex;align-items:center;gap:1rem;padding:1.25rem;}
-.stat-icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;}
-.stat-info{flex:1;}
-.stat-label{font-size:.78rem;color:#64748b;font-weight:500;margin-bottom:.2rem;}
-.stat-value{font-size:1.3rem;font-weight:700;color:#f1f5f9;}
-.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem;}
-@media(max-width:900px){.stats-grid{grid-template-columns:repeat(2,1fr);}}
-.bg-blue{background:rgba(59,130,246,.15);color:#60a5fa;}
-.bg-green{background:rgba(16,185,129,.15);color:#34d399;}
-.bg-purple{background:rgba(139,92,246,.15);color:#a78bfa;}
-.bg-yellow{background:rgba(245,158,11,.15);color:#fbbf24;}
-.bg-red{background:rgba(239,68,68,.15);color:#f87171;}
 .doc-type-card{border:2px solid #243447;border-radius:12px;padding:1.25rem;cursor:pointer;text-align:center;transition:all .2s}
 .doc-type-card:hover{border-color:#3b82f6;background:rgba(59,130,246,.04)}
 .doc-type-card.selected{border-color:#3b82f6;background:rgba(59,130,246,.08)}
@@ -75,18 +77,6 @@ textarea.modal-input{resize:vertical;min-height:70px}
 .dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}
 @media(max-width:900px){.dash-grid{grid-template-columns:1fr}}
 @media print{.sidebar,.main-header,.no-print{display:none!important}.main-content{margin-left:0!important}}
-.modal{display:none;position:fixed;inset:0;z-index:9000;align-items:center;justify-content:center;}
-.modal[style*="display:block"]{display:flex!important;}
-.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(2px);}
-.modal-content{position:relative;z-index:9001;background:#0d1117;border:1px solid rgba(255,255,255,.1);border-radius:16px;width:100%;max-width:36rem;max-height:90vh;overflow-y:auto;margin:auto;}
-.modal-content-lg{max-width:52rem!important}
-.modal-content-xl{max-width:72rem!important}
-.modal-inner{padding:1.5rem;}
-.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;}
-.modal-title{font-size:1.1rem;font-weight:600;color:#f1f5f9;}
-.modal-close{background:none;border:none;color:#64748b;cursor:pointer;font-size:1rem;padding:.25rem;}
-.modal-close:hover{color:#f1f5f9;}
-.modal-body{display:flex;flex-direction:column;gap:.75rem;}
 </style>
 
 <div class="app-container">
@@ -176,7 +166,7 @@ textarea.modal-input{resize:vertical;min-height:70px}
           </div>
         </div>
 
-        <div id="cliente-modal" class="modal" style="display:none;position:fixed;inset:0;z-index:9999;">
+        <div id="cliente-modal" class="modal">
           <div class="modal-backdrop" onclick="hideModal('cliente-modal')"></div>
           <div class="modal-content modal-content-lg">
             <div class="modal-inner">
@@ -213,9 +203,6 @@ textarea.modal-input{resize:vertical;min-height:70px}
                 <div style="background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.2);border-radius:10px;padding:1rem;">
                   <p style="font-size:.85rem;color:#93c5fd;font-weight:600;margin-bottom:.4rem;"><i class="fas fa-info-circle"></i> Configuración SMTP</p>
                   <p style="font-size:.8rem;color:#64748b;line-height:1.5;">El SMTP se configura en las variables de entorno de Render (no aquí). Usa el botón de abajo para verificar que los correos se estén enviando correctamente.</p>
-                  <div id="smtp-status-badge" style="margin-top:.5rem;padding:.5rem .75rem;border-radius:8px;font-size:.78rem;background:#1e2d3d;color:#64748b;">
-                    <i class="fas fa-circle-notch fa-spin"></i> Verificando configuración SMTP...
-                  </div>
                 </div>
                 <div style="display:flex;flex-direction:column;gap:.6rem;">
                   <div style="display:flex;justify-content:space-between;align-items:center;padding:.6rem .75rem;background:#111827;border-radius:8px;">
@@ -248,7 +235,7 @@ textarea.modal-input{resize:vertical;min-height:70px}
           </div>
         </div>
 
-        <div id="import-clientes-modal" class="modal" style="display:none;position:fixed;inset:0;z-index:9999;">
+        <div id="import-clientes-modal" class="modal">
           <div class="modal-backdrop" onclick="hideModal('import-clientes-modal')"></div>
           <div class="modal-content">
             <div class="modal-inner">
@@ -302,7 +289,7 @@ textarea.modal-input{resize:vertical;min-height:70px}
           </div>
         </div>
 
-        <div id="producto-modal" class="modal" style="display:none;position:fixed;inset:0;z-index:9999;">
+        <div id="producto-modal" class="modal">
           <div class="modal-backdrop" onclick="hideModal('producto-modal')"></div>
           <div class="modal-content modal-content-lg">
             <div class="modal-inner">
@@ -333,7 +320,7 @@ textarea.modal-input{resize:vertical;min-height:70px}
           </div>
         </div>
 
-        <div id="import-productos-modal" class="modal" style="display:none;position:fixed;inset:0;z-index:9999;">
+        <div id="import-productos-modal" class="modal">
           <div class="modal-backdrop" onclick="hideModal('import-productos-modal')"></div>
           <div class="modal-content">
             <div class="modal-inner">
@@ -389,7 +376,7 @@ textarea.modal-input{resize:vertical;min-height:70px}
             </table>
           </div>
         </div>
-        <div id="ver-documento-modal" class="modal" style="display:none;position:fixed;inset:0;z-index:9999;">
+        <div id="ver-documento-modal" class="modal">
           <div class="modal-backdrop" onclick="hideModal('ver-documento-modal')"></div>
           <div class="modal-content modal-content-xl">
             <div class="modal-inner">
@@ -475,19 +462,15 @@ textarea.modal-input{resize:vertical;min-height:70px}
                 </div>
               </div>
             </div>
-            <div class="card" style="overflow:hidden;">
-              <h3 style="font-size:.78rem;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:1rem;">Vista Previa A4</h3>
-              <div style="overflow-y:auto;max-height:calc(100vh - 220px);background:#e5e7eb;padding:1rem;border-radius:8px;">
-                <div id="doc-live-preview" class="doc-preview" style="width:210mm;min-height:297mm;margin:0 auto;padding:18mm 16mm;box-shadow:0 4px 24px rgba(0,0,0,.18);border-radius:2px;font-size:9.5pt;line-height:1.5;">
-                  <p style="color:#9ca3af;text-align:center;padding:6rem 0;font-size:.875rem;">Selecciona tipo y completa los datos para ver la vista previa</p>
-                </div>
-              </div>
+            <div class="card">
+              <h3 style="font-size:.78rem;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:1rem;">Vista Previa</h3>
+              <div id="doc-live-preview" class="doc-preview" style="min-height:350px;"><p style="color:#9ca3af;text-align:center;padding:3rem 0;font-size:.875rem;">Selecciona tipo y completa los datos para ver la vista previa</p></div>
             </div>
           </div>
         </div>
 
         <!-- Modal selector producto del sistema -->
-        <div id="selector-producto-modal" class="modal" style="display:none;position:fixed;inset:0;z-index:9999;">
+        <div id="selector-producto-modal" class="modal">
           <div class="modal-backdrop" onclick="hideModal('selector-producto-modal')"></div>
           <div class="modal-content modal-content-lg">
             <div class="modal-inner">
@@ -543,7 +526,7 @@ textarea.modal-input{resize:vertical;min-height:70px}
 
 
 <!-- Modal Cambiar Estado -->
-        <div id="cambiar-estado-modal" class="modal" style="display:none;position:fixed;inset:0;z-index:9999;">
+        <div id="cambiar-estado-modal" class="modal">
           <div class="modal-backdrop" onclick="hideModal('cambiar-estado-modal')"></div>
           <div class="modal-content">
             <div class="modal-inner">
@@ -580,7 +563,7 @@ textarea.modal-input{resize:vertical;min-height:70px}
         <input type="hidden" id="editar-doc-notas">
 
         <!-- Modal Proveedor -->
-        <div id="proveedor-modal" class="modal" style="display:none;position:fixed;inset:0;z-index:9999;">
+        <div id="proveedor-modal" class="modal">
           <div class="modal-backdrop" onclick="hideModal('proveedor-modal')"></div>
           <div class="modal-content">
             <div class="modal-inner">
@@ -608,7 +591,7 @@ textarea.modal-input{resize:vertical;min-height:70px}
           </div>
 
 <!-- MODAL PERFIL -->
-<div id="perfil-modal" class="modal" style="display:none;position:fixed;inset:0;z-index:9999;">
+<div id="perfil-modal" class="modal">
   <div class="modal-backdrop" onclick="hideModal('perfil-modal')"></div>
   <div class="modal-content">
     <div class="modal-inner">
@@ -641,7 +624,7 @@ textarea.modal-input{resize:vertical;min-height:70px}
 </div>
 
 <!-- MODAL CONFIGURACIÓN -->
-<div id="config-modal" class="modal" style="display:none;position:fixed;inset:0;z-index:9999;">
+<div id="config-modal" class="modal">
   <div class="modal-backdrop" onclick="hideModal('config-modal')"></div>
   <div class="modal-content modal-content-lg">
     <div class="modal-inner">

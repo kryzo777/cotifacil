@@ -1057,121 +1057,48 @@ function limpiarFormDoc() {
 // ── Reportes ──────────────────────────────────────────────────────
 async function loadReportes() {
   const c = document.getElementById('reportes-content');
-  if (c) c.innerHTML = '<p style="color:#64748b;text-align:center;padding:2rem;">Cargando reportes...</p>';
+  if (c) c.innerHTML = '<p style="color:#64748b;padding:2rem;text-align:center;"><i class="fas fa-circle-notch fa-spin"></i> Cargando reportes...</p>';
   try {
     const res   = await fetch('/api/stats');
     const stats = await res.json();
-    if (stats.error) { if(c) c.innerHTML = `<p style="color:#f87171;text-align:center;padding:2rem;">Error: ${stats.error}</p>`; return; }
+    if (stats.error) throw new Error(stats.error);
     renderReportes(stats);
   } catch(e) {
     console.error('Error reportes', e);
-    if(c) c.innerHTML = '<p style="color:#f87171;text-align:center;padding:2rem;">Error al cargar reportes. Intenta nuevamente.</p>';
+    if (c) c.innerHTML = `<p style="color:#f87171;padding:2rem;text-align:center;"><i class="fas fa-exclamation-triangle"></i> Error al cargar reportes: ${e.message}</p>`;
   }
 }
 
 function renderReportes(stats) {
   const c = document.getElementById('reportes-content');
   if (!c) return;
-  const ts = stats.doc_type_stats || {};
-
-  // Lógica de ventas: solo Facturas son ventas confirmadas
-  // Cotizaciones son propuestas, OC son compras (costos)
-  const ventasTotal    = ts.factura?.total   || 0;
-  const ventasCount    = ts.factura?.count   || 0;
-  const cotizTotal     = ts.cotizacion?.total || 0;
-  const cotizCount     = ts.cotizacion?.count || 0;
-  const comprasTotal   = ts.orden_compra?.total || 0;
-  const comprasCount   = ts.orden_compra?.count || 0;
-  const margenBruto    = ventasTotal - comprasTotal;
-  const tasaConversion = cotizCount > 0 ? ((ventasCount / cotizCount) * 100).toFixed(1) : 0;
-
-  // Estado de documentos
-  const es = stats.estado_stats || {};
-  const estadoRows = Object.entries(es).map(([est, cnt]) => {
-    const color = {borrador:'#64748b',enviada:'#3b82f6',aceptada:'#10b981',rechazada:'#ef4444',
-      vencida:'#f59e0b',pendiente:'#f59e0b',pagada:'#10b981',anulada:'#ef4444',
-      recibida:'#10b981',cancelada:'#ef4444'}[est] || '#64748b';
-    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem 0;border-bottom:1px solid #1e2d3d;">
-      <span style="display:inline-flex;align-items:center;gap:.4rem;font-size:.82rem;">
-        <span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0;"></span>
-        ${ESTADO_LABEL[est]||est}
-      </span>
-      <strong style="color:#e2e8f0;">${cnt}</strong>
-    </div>`;
-  }).join('') || '<p style="color:#64748b;font-size:.875rem;">Sin datos</p>';
-
-  // Top clientes por ventas (facturas)
   const clientRows = Object.entries(stats.client_stats||{})
-    .sort((a,b)=>b[1].total-a[1].total).slice(0,8)
-    .map(([name,s])=>`<tr><td>${name}</td><td style="text-align:center;">${s.count}</td><td style="text-align:right;">${formatCLP(s.total)}</td></tr>`)
-    .join('') || `<tr><td colspan="3" style="text-align:center;color:#64748b;padding:1rem;">Sin datos aún</td></tr>`;
-
-  // Ventas por mes
-  const vm = stats.ventas_mes || {};
-  const meses = Object.keys(vm).sort().slice(-6);
-  const maxVenta = Math.max(...Object.values(vm), 1);
-  const barras = meses.map(m => {
-    const pct = Math.round((vm[m] / maxVenta) * 100);
-    const label = m.slice(0,7); // YYYY-MM
-    return `<div style="display:flex;flex-direction:column;align-items:center;gap:.4rem;flex:1;">
-      <span style="font-size:.7rem;color:#64748b;">${formatCLP(vm[m])}</span>
-      <div style="width:100%;background:#1e2d3d;border-radius:4px 4px 0 0;height:120px;display:flex;align-items:flex-end;">
-        <div style="width:100%;background:linear-gradient(180deg,#3b82f6,#1d4ed8);border-radius:4px 4px 0 0;height:${pct}%;transition:height .3s;"></div>
-      </div>
-      <span style="font-size:.7rem;color:#64748b;">${label.slice(5)}</span>
-    </div>`;
-  }).join('');
-
+    .sort((a,b)=>b[1].total-a[1].total).slice(0,10)
+    .map(([name,s])=>`<tr><td>${name}</td><td>${s.count}</td><td>${formatCLP(s.total)}</td></tr>`)
+    .join('') || `<tr><td colspan="3" class="empty-table-message">Sin datos</td></tr>`;
+  const ts = stats.doc_type_stats || {};
   c.innerHTML = `
-    <!-- KPIs principales -->
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem;">
-      <div class="card stat-card"><div class="stat-icon bg-green"><i class="fas fa-dollar-sign"></i></div><div class="stat-info"><p class="stat-label">Ventas (Facturas)</p><p class="stat-value">${formatCLP(ventasTotal)}</p></div></div>
-      <div class="card stat-card"><div class="stat-icon bg-red"><i class="fas fa-shopping-cart"></i></div><div class="stat-info"><p class="stat-label">Compras (OC)</p><p class="stat-value">${formatCLP(comprasTotal)}</p></div></div>
-      <div class="card stat-card"><div class="stat-icon bg-blue"><i class="fas fa-chart-line"></i></div><div class="stat-info"><p class="stat-label">Margen Bruto</p><p class="stat-value" style="color:${margenBruto>=0?'#34d399':'#f87171'}">${formatCLP(margenBruto)}</p></div></div>
-      <div class="card stat-card"><div class="stat-icon bg-purple"><i class="fas fa-percentage"></i></div><div class="stat-info"><p class="stat-label">Tasa Conversión</p><p class="stat-value">${tasaConversion}%</p></div></div>
+    <div class="stats-grid">
+      <div class="card stat-card"><div class="stat-icon bg-blue"><i class="fas fa-file-alt"></i></div><div class="stat-info"><p class="stat-label">Total Documentos</p><p class="stat-value">${stats.total_documents??0}</p></div></div>
+      <div class="card stat-card"><div class="stat-icon bg-green"><i class="fas fa-dollar-sign"></i></div><div class="stat-info"><p class="stat-label">Ventas Totales</p><p class="stat-value">${formatCLP(stats.total_sales??0)}</p></div></div>
+      <div class="card stat-card"><div class="stat-icon bg-blue"><i class="fas fa-file-invoice"></i></div><div class="stat-info"><p class="stat-label">Cotizaciones</p><p class="stat-value">${ts.cotizacion?.count||0}</p></div></div>
+      <div class="card stat-card"><div class="stat-icon bg-purple"><i class="fas fa-receipt"></i></div><div class="stat-info"><p class="stat-label">Facturas</p><p class="stat-value">${ts.factura?.count||0}</p></div></div>
     </div>
-
-    <!-- Gráfico ventas por mes -->
-    ${meses.length ? `
-    <div class="card" style="margin-bottom:1.5rem;">
-      <h3 style="font-weight:600;margin-bottom:1.25rem;font-size:.95rem;">Ventas por Mes (últimos 6 meses)</h3>
-      <div style="display:flex;gap:.75rem;align-items:flex-end;padding:.5rem 0;">${barras}</div>
-    </div>` : ''}
-
-    <div style="display:grid;grid-template-columns:1.2fr .8fr;gap:1.5rem;margin-bottom:1.5rem;">
-      <!-- Top clientes -->
+    <div class="dash-grid">
       <div class="card">
-        <h3 style="font-weight:600;margin-bottom:1rem;font-size:.95rem;">Top Clientes</h3>
+        <h3 style="font-weight:600;margin-bottom:1rem;">Top Clientes por Ventas</h3>
         <div class="table-container"><table>
-          <thead><tr><th>Cliente</th><th style="text-align:center;">Docs</th><th style="text-align:right;">Total</th></tr></thead>
+          <thead><tr><th>Cliente</th><th>Documentos</th><th>Total</th></tr></thead>
           <tbody>${clientRows}</tbody>
         </table></div>
       </div>
-      <!-- Estados -->
       <div class="card">
-        <h3 style="font-weight:600;margin-bottom:1rem;font-size:.95rem;">Estados de Documentos</h3>
-        ${estadoRows}
-      </div>
-    </div>
-
-    <!-- Resumen por tipo -->
-    <div class="card">
-      <h3 style="font-weight:600;margin-bottom:1rem;font-size:.95rem;">Resumen por Tipo de Documento</h3>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;">
-        ${[
-          {tipo:'cotizacion', label:'Cotizaciones', icon:'fa-file-invoice', color:'#60a5fa', nota:'Propuestas enviadas'},
-          {tipo:'factura',    label:'Facturas',     icon:'fa-receipt',      color:'#34d399', nota:'Ventas confirmadas'},
-          {tipo:'orden_compra',label:'Órdenes Compra',icon:'fa-shopping-cart',color:'#a78bfa',nota:'Compras a proveedores'},
-        ].map(({tipo,label,icon,color,nota}) => {
-          const s = ts[tipo]||{count:0,total:0};
-          return `<div style="background:#0f1923;border-radius:10px;padding:1rem;border:1px solid #1e2d3d;">
-            <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.75rem;">
-              <i class="fas ${icon}" style="color:${color};font-size:1rem;"></i>
-              <span style="font-weight:600;font-size:.9rem;color:#e2e8f0;">${label}</span>
-            </div>
-            <p style="font-size:1.4rem;font-weight:700;color:${color};margin-bottom:.2rem;">${s.count}</p>
-            <p style="font-size:.82rem;color:#64748b;">${formatCLP(s.total)}</p>
-            <p style="font-size:.72rem;color:#475569;margin-top:.25rem;">${nota}</p>
+        <h3 style="font-weight:600;margin-bottom:1rem;">Resumen por Tipo</h3>
+        ${['cotizacion','orden_compra','factura'].map(t=>{
+          const s=ts[t]||{count:0,total:0};
+          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:.6rem 0;border-bottom:1px solid #1e2d3d;">
+            <span class="badge badge-${t}">${tipoLabel(t)}</span>
+            <div><strong>${s.count}</strong> docs · ${formatCLP(s.total)}</div>
           </div>`;
         }).join('')}
       </div>
@@ -1305,21 +1232,6 @@ function abrirConfiguracion() {
   set('cfg-prefijo-fac',       cfg.prefijosFac);
   set('cfg-pie-pagina',        cfg.piePagina);
   set('cfg-app-nombre',        cfg.appNombre);
-  // Verificar estado SMTP
-  const badge = document.getElementById('smtp-status-badge');
-  if (badge) {
-    badge.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Verificando SMTP...';
-    badge.style.background = '#1e2d3d'; badge.style.color = '#64748b';
-    fetch('/api/smtp-status').then(r=>r.json()).then(d => {
-      if (d.configured) {
-        badge.innerHTML = `<i class="fas fa-check-circle" style="color:#10b981;"></i> SMTP configurado — <strong>${d.user}</strong> via ${d.host}:${d.port} (clave: ${d.pass_length} chars)`;
-        badge.style.background = 'rgba(16,185,129,.1)'; badge.style.color = '#34d399';
-      } else {
-        badge.innerHTML = '<i class="fas fa-exclamation-triangle" style="color:#f59e0b;"></i> SMTP no configurado — agrega SMTP_HOST, SMTP_USER y SMTP_PASS en Render → Environment';
-        badge.style.background = 'rgba(245,158,11,.1)'; badge.style.color = '#fbbf24';
-      }
-    }).catch(()=>{ badge.innerHTML = '<i class="fas fa-times-circle" style="color:#ef4444;"></i> Error al verificar SMTP'; });
-  }
   // Color doc
   const docColor = cfg.docColor || '#3b82f6';
   const hexEl = document.getElementById('cfg-doc-color-hex');
@@ -1427,18 +1339,15 @@ function setupDropdownClose() {
 function showModal(id) {
   const m = document.getElementById(id);
   if (!m) return;
-  // Move to body if not already there (ensures correct stacking)
-  if (m.parentElement !== document.body) {
-    document.body.appendChild(m);
-  }
-  m.style.display = 'flex';
+  if (m.parentElement !== document.body) document.body.appendChild(m);
+  m.style.cssText = 'display:flex!important;position:fixed!important;inset:0!important;z-index:9999!important;align-items:center!important;justify-content:center!important;';
   document.body.style.overflow = 'hidden';
 }
 
 function hideModal(id) {
   const m = document.getElementById(id);
   if (m) {
-    m.style.display = 'none';
+    m.style.cssText = 'display:none!important;';
     document.body.style.overflow = '';
   }
 }
@@ -1638,11 +1547,13 @@ function renderProviders(list) {
 }
 
 async function loadProveedoresPage() {
-  if (App.providers.length === 0) {
-    try {
-      const res = await fetch('/api/providers');
-      App.providers = await res.json();
-    } catch(e) {}
+  try {
+    const res = await fetch('/api/providers');
+    const data = await res.json();
+    App.providers = Array.isArray(data) ? data : [];
+  } catch(e) {
+    console.error('Error cargando proveedores:', e);
+    App.providers = [];
   }
   renderProviders(App.providers);
 }

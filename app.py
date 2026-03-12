@@ -790,28 +790,7 @@ def api_import_products():
             if not row or len(row)<2 or not row[0].strip(): continue
             sku = row[0].strip()
             if any(p.get('sku','').strip()==sku for p in products+new_products): continue
-            try:
-                raw_precio = str(row[2]).strip().replace('$','').replace(' ','') if len(row)>2 else ''
-                # Formato chileno: 1.990 o 1.990,50
-                # Formato internacional: 1,990 o 1,990.50
-                if raw_precio:
-                    if ',' in raw_precio and '.' in raw_precio:
-                        # Ambos: el último separador es el decimal
-                        if raw_precio.rindex(',') > raw_precio.rindex('.'):
-                            raw_precio = raw_precio.replace('.','').replace(',','.')
-                        else:
-                            raw_precio = raw_precio.replace(',','')
-                    elif ',' in raw_precio:
-                        # Solo coma: puede ser miles (1,990) o decimal (1,5)
-                        parts = raw_precio.split(',')
-                        raw_precio = raw_precio.replace(',','') if len(parts[-1]) == 3 else raw_precio.replace(',','.')
-                    elif '.' in raw_precio:
-                        # Solo punto: puede ser miles chileno (1.990) o decimal (1.5)
-                        parts = raw_precio.split('.')
-                        raw_precio = raw_precio.replace('.','') if len(parts[-1]) == 3 else raw_precio
-                    precio = float(raw_precio) if raw_precio else 0
-                else:
-                    precio = 0
+            try:    precio = float(str(row[2]).strip().replace('.','').replace(',','.')) if len(row)>2 and row[2].strip() else 0
             except: precio = 0
             try:    stock = int(row[3].strip()) if len(row)>3 and str(row[3]).strip().isdigit() else 0
             except: stock = 0
@@ -996,7 +975,7 @@ def api_stats():
         clients  = get_user_items(uid,'clients')
         products = get_user_items(uid,'products')
 
-        total_sales = sum(d.get('total',0) for d in docs if d.get('tipo') != 'orden_compra')
+        total_sales = sum(d.get('total',0) for d in docs if d.get('tipo') == 'factura')
         total_compras = sum(d.get('total',0) for d in docs if d.get('tipo') == 'orden_compra')
         recent_docs = sorted(docs, key=lambda x: x.get('date',''), reverse=True)[:5]
 
@@ -1050,23 +1029,6 @@ def api_stats():
 
 init_db()
 _init_tokens_table()
-
-@app.route('/api/smtp-status')
-@login_required
-def api_smtp_status():
-    """Devuelve estado de configuración SMTP sin exponer credenciales."""
-    host = os.environ.get('SMTP_HOST','')
-    user = os.environ.get('SMTP_USER','')
-    pwd  = os.environ.get('SMTP_PASS','').replace(' ','')
-    port = os.environ.get('SMTP_PORT','587')
-    ok   = bool(host and user and pwd)
-    return jsonify({
-        'configured': ok,
-        'host': host,
-        'port': port,
-        'user': user,
-        'pass_length': len(pwd),
-    })
 
 if __name__ == '__main__':
     app.run(debug=True)
