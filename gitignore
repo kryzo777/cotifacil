@@ -8,3 +8,7 @@ flask_session/
 dist/
 build/
 .DS_Store
+
+# Base de datos local (fallback JSON — no subir a GitHub)
+data/
+data/database.json
