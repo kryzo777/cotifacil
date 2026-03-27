@@ -40,6 +40,7 @@ if DATABASE_URL:
                     password TEXT NOT NULL,
                     name TEXT NOT NULL,
                     role TEXT DEFAULT 'user',
+                    verified BOOLEAN DEFAULT TRUE,
                     created_at TIMESTAMP DEFAULT NOW()
                 );
                 CREATE TABLE IF NOT EXISTS user_data (
@@ -55,10 +56,16 @@ if DATABASE_URL:
                 );
             ''')
             # Admin por defecto
-            cur.execute(
-                "INSERT INTO users (email, password, name, role) VALUES (%s, %s, %s, %s) ON CONFLICT DO NOTHING",
-                ('admin@cotifacil.com', 'admin123', 'Administrador', 'admin')
-            )
+            # Admin por defecto — sólo si no existe
+            cur.execute("SELECT id FROM users WHERE email='admin@cotifacil.com'")
+            if not cur.fetchone():
+                import hashlib as _hl, secrets as _sec
+                _salt = _sec.token_hex(16)
+                _hpwd = f"{_salt}:{_hl.sha256((_salt+'admin123').encode()).hexdigest()}"
+                cur.execute(
+                    "INSERT INTO users (email, password, name, role) VALUES (%s, %s, %s, %s)",
+                    ('admin@cotifacil.com', _hpwd, 'Administrador', 'admin')
+                )
             conn.commit()
         finally:
             cur.close(); put_conn(conn)
@@ -96,7 +103,6 @@ if DATABASE_URL:
         conn = get_conn()
         try:
             cur = conn.cursor()
-            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS verified BOOLEAN DEFAULT TRUE")
             cur.execute(
                 "INSERT INTO users (email, password, name, role, verified) VALUES (%s,%s,%s,%s,%s) RETURNING id",
                 (email.lower(), password, name, role, verified)
@@ -201,7 +207,10 @@ else:
     def init_db():
         os.makedirs(DATA_DIR, exist_ok=True)
         if not os.path.exists(DB_FILE):
-            _save({"users": [{"id":1,"email":"admin@cotifacil.com","password":"admin123","name":"Administrador","role":"admin"}], "user_data": {"1":{"clients":[],"products":[],"documents":[]}}, "user_config": {}})
+            import hashlib as _hl, secrets as _sec
+            _salt = _sec.token_hex(16)
+            _hpwd = f"{_salt}:{_hl.sha256((_salt+'admin123').encode()).hexdigest()}"
+            _save({"users": [{"id":1,"email":"admin@cotifacil.com","password":_hpwd,"name":"Administrador","role":"admin","verified":True}], "user_data": {"1":{"clients":[],"products":[],"documents":[]}}, "user_config": {}})
         else:
             db = _load()
             # migrar formato viejo
@@ -368,9 +377,10 @@ def html_email_verificacion(nombre, link):
       </div>
     </div>'''
 
-app.secret_key = os.environ.get('SECRET_KEY', 'cotifacil_secret_key_2024')
+app.secret_key = os.environ.get('SECRET_KEY', 'cotifacil_dev_secret_change_in_production_2024')
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE']   = os.environ.get('DATABASE_URL', '') != ''  # HTTPS en prod
 
 # ── Helpers contraseña ────────────────────────────────────────────
 def hash_password(password):
@@ -385,7 +395,7 @@ def verify_password(password, stored):
     return hashlib.sha256((salt + password).encode()).hexdigest() == hashed
 
 def get_next_id(items):
-    return max((item['id'] for item in items), default=0) + 1
+    return max((item.get('id', 0) for item in items), default=0) + 1
 
 def login_required(f):
     @wraps(f)
@@ -489,6 +499,8 @@ def login():
             password = data.get('password','')
             user = find_user_by_email(email)
             if user and verify_password(password, user['password']):
+                if not user.get('verified', True):
+                    return jsonify({"success":False,"message":"Debes confirmar tu correo antes de ingresar. Revisa tu bandeja de entrada."}), 403
                 session['user_id']    = user['id']
                 session['user_name']  = user['name']
                 session['user_email'] = user['email']

@@ -189,35 +189,7 @@ textarea.modal-input{resize:vertical;min-height:70px}
                     <div><label class="modal-label">Email</label><input type="email" id="email" class="modal-input" placeholder="contacto@empresa.cl"></div>
                     <div style="grid-column:1/-1;"><label class="modal-label">Notas</label><textarea id="nota" class="modal-input" rows="2" placeholder="Observaciones, giro, condiciones..."></textarea></div>
                   </div>
-                  <!-- Email Panel -->
-            <div class="cfg-panel" id="cfgpanel-email">
-              <div style="display:flex;flex-direction:column;gap:1rem;">
-                <div style="background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.2);border-radius:10px;padding:1rem;">
-                  <p style="font-size:.85rem;color:#93c5fd;font-weight:600;margin-bottom:.4rem;"><i class="fas fa-info-circle"></i> Configuración SMTP</p>
-                  <p style="font-size:.8rem;color:#64748b;line-height:1.5;">El SMTP se configura en las variables de entorno de Render (no aquí). Usa el botón de abajo para verificar que los correos se estén enviando correctamente.</p>
-                </div>
-                <div style="display:flex;flex-direction:column;gap:.6rem;">
-                  <div style="display:flex;justify-content:space-between;align-items:center;padding:.6rem .75rem;background:#111827;border-radius:8px;">
-                    <span style="font-size:.82rem;color:#94a3b8;">SMTP_HOST</span>
-                    <span style="font-size:.82rem;color:#475569;">smtp.gmail.com</span>
-                  </div>
-                  <div style="display:flex;justify-content:space-between;align-items:center;padding:.6rem .75rem;background:#111827;border-radius:8px;">
-                    <span style="font-size:.82rem;color:#94a3b8;">SMTP_PORT</span>
-                    <span style="font-size:.82rem;color:#475569;">587 (TLS)</span>
-                  </div>
-                  <div style="display:flex;justify-content:space-between;align-items:center;padding:.6rem .75rem;background:#111827;border-radius:8px;">
-                    <span style="font-size:.82rem;color:#94a3b8;">SMTP_USER</span>
-                    <span style="font-size:.82rem;color:#475569;">Tu Gmail configurado</span>
-                  </div>
-                </div>
-                <div id="email-test-result" style="display:none;padding:.75rem;border-radius:8px;font-size:.85rem;text-align:center;"></div>
-                <button onclick="testearEmail()" id="btn-test-email" style="width:100%;padding:.75rem;background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:white;border:none;border-radius:10px;font-size:.9rem;font-weight:600;cursor:pointer;">
-                  <i class="fas fa-paper-plane"></i> Enviar email de prueba a mi correo
-                </button>
-              </div>
-            </div>
-
-            <div class="flex justify-end gap-2" style="margin-top:1.25rem;">
+                  <div class="flex justify-end gap-2" style="margin-top:1.25rem;">
                     <button type="button" class="btn-secondary" onclick="hideModal('cliente-modal')">Cancelar</button>
                     <button type="submit" class="btn-primary">Guardar</button>
                   </div>
@@ -355,9 +327,16 @@ textarea.modal-input{resize:vertical;min-height:70px}
               </select>
               <select id="doc-filter-estado" class="modal-input" style="width:auto;padding:.5rem 2rem .5rem .75rem;margin:0;" onchange="filtrarDocumentos()">
                 <option value="">Todos los estados</option>
+                <option value="borrador">Borrador</option>
+                <option value="enviada">Enviada</option>
+                <option value="aceptada">Aceptada</option>
+                <option value="rechazada">Rechazada</option>
+                <option value="vencida">Vencida</option>
                 <option value="pendiente">Pendiente</option>
-                <option value="aprobado">Aprobado</option>
-                <option value="rechazado">Rechazado</option>
+                <option value="pagada">Pagada</option>
+                <option value="anulada">Anulada</option>
+                <option value="recibida">Recibida</option>
+                <option value="cancelada">Cancelada</option>
               </select>
             </div>
           </div>
@@ -588,11 +567,39 @@ textarea.modal-input{resize:vertical;min-height:70px}
           </div>
         </div>
 
-        <!-- Campos ocultos para compatibilidad -->
-        <input type="hidden" id="editar-doc-id">
-        <input type="hidden" id="editar-doc-estado">
-        <input type="hidden" id="editar-doc-validez">
-        <input type="hidden" id="editar-doc-notas">
+        <!-- Modal Editar Documento -->
+        <div id="editar-documento-modal" class="modal">
+          <div class="modal-backdrop" onclick="hideModal('editar-documento-modal')"></div>
+          <div class="modal-content">
+            <div class="modal-inner">
+              <div class="modal-header">
+                <h2 class="modal-title" id="editar-doc-title">Editar Documento</h2>
+                <button class="modal-close" onclick="hideModal('editar-documento-modal')"><i class="fas fa-times"></i></button>
+              </div>
+              <div class="modal-body">
+                <input type="hidden" id="editar-doc-id">
+                <div style="display:flex;flex-direction:column;gap:1rem;">
+                  <div>
+                    <label class="modal-label">Estado</label>
+                    <select id="editar-doc-estado" class="modal-input"></select>
+                  </div>
+                  <div>
+                    <label class="modal-label">Válido por (días)</label>
+                    <input type="number" id="editar-doc-validez" class="modal-input" value="30" min="1">
+                  </div>
+                  <div>
+                    <label class="modal-label">Notas</label>
+                    <textarea id="editar-doc-notas" class="modal-input" rows="3" placeholder="Notas internas..."></textarea>
+                  </div>
+                </div>
+                <div class="flex justify-end gap-2" style="margin-top:1.25rem;">
+                  <button class="btn-secondary" onclick="hideModal('editar-documento-modal')">Cancelar</button>
+                  <button class="btn-primary" onclick="confirmarEditarDoc()"><i class="fas fa-save"></i> Guardar Cambios</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <!-- Modal Proveedor -->
         <div id="proveedor-modal" class="modal">
@@ -621,6 +628,7 @@ textarea.modal-input{resize:vertical;min-height:70px}
               </div>
             </div>
           </div>
+        </div>
 
 <!-- MODAL PERFIL -->
 <div id="perfil-modal" class="modal">
@@ -799,6 +807,38 @@ textarea.modal-input{resize:vertical;min-height:70px}
                 <p class="cfg-section-title">Nombre del sistema</p>
                 <input type="text" id="cfg-app-nombre" class="modal-input" placeholder="CotiFácil" value="CotiFácil">
                 <p style="color:#64748b;font-size:.78rem;margin-top:.4rem;">Aparece en el sidebar y en los documentos</p>
+              </div>
+            </div>
+            <!-- Email -->
+            <div class="cfg-panel" id="cfgpanel-email">
+              <div class="cfg-section">
+                <p class="cfg-section-title">Configuración SMTP</p>
+                <div style="background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.2);border-radius:10px;padding:1rem;margin-bottom:1rem;">
+                  <p style="font-size:.85rem;color:#93c5fd;font-weight:600;margin-bottom:.4rem;"><i class="fas fa-info-circle"></i> Variables de entorno en Render</p>
+                  <p style="font-size:.8rem;color:#64748b;line-height:1.6;">Configura las siguientes variables en tu servicio de Render para habilitar el envío de emails:</p>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:.5rem;margin-bottom:1rem;">
+                  <div style="display:flex;justify-content:space-between;align-items:center;padding:.6rem .75rem;background:#111827;border-radius:8px;">
+                    <span style="font-size:.82rem;color:#94a3b8;font-family:monospace;">SMTP_HOST</span>
+                    <span style="font-size:.82rem;color:#475569;">smtp.gmail.com</span>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;align-items:center;padding:.6rem .75rem;background:#111827;border-radius:8px;">
+                    <span style="font-size:.82rem;color:#94a3b8;font-family:monospace;">SMTP_PORT</span>
+                    <span style="font-size:.82rem;color:#475569;">587 (TLS)</span>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;align-items:center;padding:.6rem .75rem;background:#111827;border-radius:8px;">
+                    <span style="font-size:.82rem;color:#94a3b8;font-family:monospace;">SMTP_USER</span>
+                    <span style="font-size:.82rem;color:#475569;">tu@gmail.com</span>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;align-items:center;padding:.6rem .75rem;background:#111827;border-radius:8px;">
+                    <span style="font-size:.82rem;color:#94a3b8;font-family:monospace;">SMTP_PASS</span>
+                    <span style="font-size:.82rem;color:#475569;">App Password (16 chars)</span>
+                  </div>
+                </div>
+                <div id="email-test-result" style="display:none;padding:.75rem;border-radius:8px;font-size:.85rem;text-align:center;margin-bottom:.75rem;"></div>
+                <button onclick="testearEmail()" id="btn-test-email" style="width:100%;padding:.75rem;background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:white;border:none;border-radius:10px;font-size:.9rem;font-weight:600;cursor:pointer;font-family:inherit;">
+                  <i class="fas fa-paper-plane"></i> Enviar email de prueba a mi correo
+                </button>
               </div>
             </div>
             <div class="flex justify-end gap-2" style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid #1e2d3d;">

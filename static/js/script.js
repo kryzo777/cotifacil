@@ -38,6 +38,29 @@ const ESTADO_COLOR = {
 // ── Init ──────────────────────────────────────────────────────────
 
 // ── Utilidades (from backup) ─────────────────────────
+function escHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+async function testearEmail() {
+  const btn = document.getElementById('btn-test-email');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...'; }
+  try {
+    const res  = await fetch('/api/email/test', { method: 'POST' });
+    const data = await res.json();
+    showMessage(data.message || (data.success ? 'Email enviado correctamente' : 'Error al enviar'), data.success ? 'success' : 'error');
+  } catch { showMessage('Error de conexión al probar email', 'error'); }
+  finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Enviar email de prueba'; }
+  }
+}
+
 function abrirConfiguracion() {
   const cfg = App.config;
   if (cfg.empresaNombre) document.getElementById('cfg-empresa-nombre').value = cfg.empresaNombre;
@@ -65,11 +88,31 @@ function abrirPerfil() {
   showModal('perfil-modal');
 }
 
-function cambiarColor(color, btn) {
-  document.querySelectorAll('.color-swatch').forEach(b => b.classList.remove('selected'));
+function cambiarColor(color, btn, tipo) {
+  // tipo puede ser 'sistema' o 'doc' — si no se pasa, aplica a sistema (retrocompatible)
+  const scope = tipo || 'sistema';
+  const container = scope === 'doc' ? document.getElementById('swatches-doc') : document.getElementById('swatches-sistema');
+  if (container) container.querySelectorAll('.color-swatch').forEach(b => b.classList.remove('selected'));
+  else document.querySelectorAll('.color-swatch').forEach(b => b.classList.remove('selected'));
   if (btn) btn.classList.add('selected');
-  App.config.color = color;
-  document.documentElement.style.setProperty('--primary-color', color);
+  if (scope === 'doc') {
+    App.config.docColor = color;
+    const hexLabel = document.getElementById('cfg-doc-color-hex');
+    if (hexLabel) hexLabel.textContent = color;
+    const picker = document.getElementById('cfg-doc-color-custom');
+    if (picker) picker.value = color;
+  } else {
+    App.config.color = color;
+    document.documentElement.style.setProperty('--primary-color', color);
+  }
+}
+
+function cambiarColorDocCustom(color) {
+  App.config.docColor = color;
+  const hexLabel = document.getElementById('cfg-doc-color-hex');
+  if (hexLabel) hexLabel.textContent = color;
+  const docSwatches = document.getElementById('swatches-doc');
+  if (docSwatches) docSwatches.querySelectorAll('.color-swatch').forEach(b => b.classList.remove('selected'));
 }
 
 function capitalize(str) { return str ? str.charAt(0).toUpperCase() + str.slice(1) : ''; }
@@ -108,7 +151,20 @@ function guardarConfiguracion() {
     mostrarLogo:   document.getElementById('cfg-mostrar-logo')?.checked,
     mostrarEmpresa: document.getElementById('cfg-mostrar-empresa')?.checked,
   };
+  // Persistir docColor desde el color-picker si no fue tocado por los swatches
+  const picker = document.getElementById('cfg-doc-color-custom');
+  if (picker && !App.config.docColor) App.config.docColor = picker.value;
+
+  // Guardar en localStorage (fallback local)
   try { localStorage.setItem('cotifacil_config', JSON.stringify(App.config)); } catch(e) {}
+
+  // Guardar en servidor (persistencia real)
+  fetch('/api/user/config', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(App.config)
+  }).catch(() => {});  // silencioso si falla
+
   aplicarConfig();
   hideModal('config-modal');
   showMessage('Configuración guardada', 'success');
@@ -337,6 +393,13 @@ function aplicarConfig() {
     const t = document.getElementById('app-title');
     if (t) t.textContent = cfg.appNombre;
   }
+  // Sincronizar color-picker de documentos con la config guardada
+  if (cfg.docColor) {
+    const picker = document.getElementById('cfg-doc-color-custom');
+    const hexLabel = document.getElementById('cfg-doc-color-hex');
+    if (picker)   picker.value       = cfg.docColor;
+    if (hexLabel) hexLabel.textContent = cfg.docColor;
+  }
 }
 
 // ── Usuario ───────────────────────────────────────────────────────
@@ -476,7 +539,8 @@ async function loadClients() {
   showLoading('clients-table-body', 8);
   try {
     const res   = await fetch('/api/clients');
-    App.clients = await res.json();
+    const data  = await res.json();
+    App.clients = Array.isArray(data) ? data : [];
     renderClients(App.clients);
   } catch { showError('clients-table-body', 'Error cargando clientes', 8); }
 }
@@ -595,7 +659,8 @@ async function loadProducts() {
   showLoading('products-table-body', 9);
   try {
     const res    = await fetch('/api/products');
-    App.products = await res.json();
+    const data   = await res.json();
+    App.products = Array.isArray(data) ? data : [];
     renderProducts(App.products);
     updateProductStats(App.products);
   } catch { showError('products-table-body', 'Error cargando productos', 9); }
@@ -722,8 +787,9 @@ async function confirmarImportarProductos() {
 async function loadDocuments() {
   showLoading('documents-table-body', 7);
   try {
-    const res     = await fetch('/api/documents');
-    App.documents = await res.json();
+    const res  = await fetch('/api/documents');
+    const data = await res.json();
+    App.documents = Array.isArray(data) ? data : [];
     renderDocuments(App.documents);
   } catch { showError('documents-table-body', 'Error cargando documentos', 7); }
 }
@@ -793,12 +859,20 @@ function descargarPDFActual() {
 function editarDocumento(id) {
   const doc = App.documents.find(d => d.id === id);
   if (!doc) return;
+  const tipo   = doc.tipo || 'cotizacion';
+  const estados = ESTADOS[tipo] || [];
   document.getElementById('editar-doc-id').value      = id;
-  document.getElementById('editar-doc-estado').value  = doc.estado  || 'pendiente';
+  // Poblar select de estados según tipo
+  const sel = document.getElementById('editar-doc-estado');
+  if (sel) {
+    sel.innerHTML = estados.map(e =>
+      `<option value="${e}" ${e === doc.estado ? 'selected' : ''}>${ESTADO_LABEL[e] || e}</option>`
+    ).join('');
+  }
   document.getElementById('editar-doc-validez').value = doc.validez || 30;
   document.getElementById('editar-doc-notas').value   = doc.notas   || '';
   const title = document.getElementById('editar-doc-title');
-  if (title) title.textContent = `Editar: ${doc.number||'Documento'}`;
+  if (title) title.textContent = `Editar: ${doc.number || 'Documento'}`;
   showModal('editar-documento-modal');
 }
 
@@ -1561,6 +1635,76 @@ function actualizarStatProveedores() {
 }
 
 
+
+// ── CRUD Proveedores ──────────────────────────────────────────────
+function crearProveedor() {
+  const t = document.getElementById('prov-modal-title');
+  if (t) t.textContent = 'Nuevo Proveedor';
+  ['prov-id','prov-nombre','prov-rut','prov-contacto','prov-email','prov-telefono','prov-direccion','prov-nota'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  showModal('proveedor-modal');
+}
+
+function editarProveedor(id) {
+  const p = App.providers.find(x => x.id === id);
+  if (!p) return;
+  const t = document.getElementById('prov-modal-title');
+  if (t) t.textContent = 'Editar Proveedor';
+  document.getElementById('prov-id').value        = p.id;
+  document.getElementById('prov-nombre').value    = p.nombre    || p.razon_social || '';
+  document.getElementById('prov-rut').value       = p.rut       || '';
+  document.getElementById('prov-contacto').value  = p.contacto  || '';
+  document.getElementById('prov-email').value     = p.email     || '';
+  document.getElementById('prov-telefono').value  = p.telefono  || '';
+  document.getElementById('prov-direccion').value = p.direccion || '';
+  document.getElementById('prov-nota').value      = p.nota      || '';
+  showModal('proveedor-modal');
+}
+
+async function guardarProveedor() {
+  const id     = document.getElementById('prov-id')?.value;
+  const nombre = document.getElementById('prov-nombre')?.value.trim();
+  if (!nombre) { showMessage('El nombre del proveedor es obligatorio', 'error'); return; }
+  const payload = {
+    nombre:    nombre,
+    rut:       document.getElementById('prov-rut')?.value.trim()       || '',
+    contacto:  document.getElementById('prov-contacto')?.value.trim()  || '',
+    email:     document.getElementById('prov-email')?.value.trim()     || '',
+    telefono:  document.getElementById('prov-telefono')?.value.trim()  || '',
+    direccion: document.getElementById('prov-direccion')?.value.trim() || '',
+    nota:      document.getElementById('prov-nota')?.value.trim()      || '',
+  };
+  const btn = document.querySelector('#proveedor-modal .btn-primary');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...'; }
+  try {
+    const res  = await fetch(id ? `/api/providers/${id}` : '/api/providers', {
+      method: id ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (data.success) {
+      hideModal('proveedor-modal');
+      showMessage(id ? 'Proveedor actualizado' : 'Proveedor creado', 'success');
+      await loadProveedoresPage();
+    } else { showMessage(data.error || 'Error al guardar proveedor', 'error'); }
+  } catch { showMessage('Error de conexión', 'error'); }
+  finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Guardar'; }
+  }
+}
+
+async function eliminarProveedor(id) {
+  if (!confirm('¿Eliminar este proveedor? Esta acción no se puede deshacer.')) return;
+  try {
+    const res  = await fetch(`/api/providers/${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.success) { showMessage('Proveedor eliminado', 'success'); await loadProveedoresPage(); }
+    else showMessage(data.error || 'Error al eliminar', 'error');
+  } catch { showMessage('Error de conexión', 'error'); }
+}
 
 async function loadProveedoresPage() {
   const tbody = document.getElementById('proveedores-table-body');
